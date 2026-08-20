@@ -75,9 +75,12 @@ opts = {
     enabled = true,
     min_complexity = 4,   -- leave trivial functions unannotated
     prefix = '●',
+    -- Text between the prefix and the number. See below.
+    label = { cyclomatic = 'CC', cognitive = 'COG' },
+    -- Only needed to change the *shape* of the annotation; `prefix` and
+    -- `label` cover its wording.
     format = function(entry, cfg)
-      local label = cfg.metric == 'cognitive' and 'COG' or 'CC'
-      return string.format('%s %s %d', cfg.virtual_text.prefix, label, entry[cfg.metric])
+      -- default: prefix, label and number, joined by spaces, empties dropped
     end,
     position = 'eol',
     priority = 100,
@@ -95,6 +98,25 @@ opts = {
   max_filesize = 512 * 1024,
 }
 ```
+
+### Wording
+
+`prefix` and `label` are the two knobs for what the annotation says:
+
+```lua
+virtual_text = { prefix = '', label = 'complexity' }      --  complexity 14
+virtual_text = { prefix = '󰅩', label = '' }                --  󰅩 14
+virtual_text = { label = { cyclomatic = 'Cyc' } }         --  ● Cyc 14
+```
+
+`label` is a table because `:Cyclomatic metric` switches metrics while the
+annotations are on screen, and a single fixed string would start lying the
+moment it was flipped. Passing a plain string is allowed and applies to both.
+Overriding one metric leaves the other at its default.
+
+Reach for `format` only when you want a different shape entirely — it receives
+the entry (`name`, `cyclomatic`, `cognitive`, …) and the resolved config, and
+returns the string to draw.
 
 ### Colours
 

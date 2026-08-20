@@ -27,11 +27,30 @@ M.defaults = {
     -- annotate everything, including trivial getters.
     min_complexity = 4,
     prefix = '●',
-    -- Rendered at the end of the function's signature line.
+
+    -- Text between the prefix and the number. A table keeps a label per metric,
+    -- which matters because `:Cyclomatic metric` switches between them while
+    -- the annotations are on screen -- a single fixed string would start lying
+    -- the moment it was flipped. A plain string is accepted too, and is used
+    -- whichever metric is active. Set it to '' to show only the number.
+    ---@type string|table<string, string>
+    label = { cyclomatic = 'CC', cognitive = 'COG' },
+
+    -- Rendered at the end of the function's signature line. Override this only
+    -- to change the *shape* of the annotation; for its wording, `prefix` and
+    -- `label` are enough.
     ---@type fun(entry: table, cfg: table): string
     format = function(entry, cfg)
-      local label = cfg.metric == 'cognitive' and 'COG' or 'CC'
-      return string.format('%s %s %d', cfg.virtual_text.prefix, label, entry[cfg.metric])
+      local parts = {}
+      if cfg.virtual_text.prefix ~= '' then
+        parts[#parts + 1] = cfg.virtual_text.prefix
+      end
+      local label = M.label()
+      if label ~= '' then
+        parts[#parts + 1] = label
+      end
+      parts[#parts + 1] = tostring(entry[cfg.metric])
+      return table.concat(parts, ' ')
     end,
     position = 'eol',
     priority = 100,
@@ -64,6 +83,19 @@ M.options = vim.deepcopy(M.defaults)
 function M.setup(opts)
   M.options = vim.tbl_deep_extend('force', vim.deepcopy(M.defaults), opts or {})
   return M.options
+end
+
+--- The label for whichever metric is currently being displayed.
+---
+--- Resolves the `virtual_text.label` option, which may be a table keyed by
+--- metric or a single string covering both.
+---@return string
+function M.label()
+  local label = M.options.virtual_text.label
+  if type(label) == 'table' then
+    return label[M.options.metric] or ''
+  end
+  return label or ''
 end
 
 --- Bucket a complexity score into a threshold name.

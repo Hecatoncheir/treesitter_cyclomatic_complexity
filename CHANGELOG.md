@@ -7,6 +7,22 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-20
+
+### Added
+
+- `virtual_text.label` makes the text before the number configurable without
+  replacing the whole `format` function. It takes a table keyed by metric --
+  `:Cyclomatic metric` switches metrics while annotations are on screen, so a
+  single fixed string would start lying the moment it was flipped -- and also
+  accepts a plain string for both, or `''` to show just the number.
+
+### Fixed
+
+- The default annotation no longer leaves a stray leading space when `prefix` is
+  set to `''`. Its parts are joined rather than formatted into a fixed template,
+  so an empty prefix or label simply drops out.
+
 ## [0.2.0] - 2026-08-20
 
 ### Added
@@ -80,7 +96,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/releases/tag/v0.1.0

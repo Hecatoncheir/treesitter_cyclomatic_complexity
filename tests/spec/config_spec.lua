@@ -41,4 +41,37 @@ return {
     config.setup({ metric = 'cognitive' })
     t.eq(config.options.virtual_text.format(entry, config.options), '● COG 3')
   end,
+
+  ['label can be set per metric'] = function(t)
+    config.setup({ virtual_text = { label = { cyclomatic = 'Cyc', cognitive = 'Cog' } } })
+    t.eq(config.label(), 'Cyc')
+    config.options.metric = 'cognitive'
+    t.eq(config.label(), 'Cog')
+  end,
+
+  ['overriding one metric leaves the other at its default'] = function(t)
+    config.setup({ virtual_text = { label = { cyclomatic = 'Complexity' } } })
+    t.eq(config.label(), 'Complexity')
+    config.options.metric = 'cognitive'
+    t.eq(config.label(), 'COG', 'the untouched half survives the merge')
+  end,
+
+  ['a plain string label covers both metrics'] = function(t)
+    config.setup({ virtual_text = { label = 'CX' } })
+    t.eq(config.label(), 'CX')
+    config.options.metric = 'cognitive'
+    t.eq(config.label(), 'CX')
+  end,
+
+  ['an empty label leaves just the prefix and the number'] = function(t)
+    config.setup({ virtual_text = { label = '' } })
+    local entry = { cyclomatic = 7, cognitive = 3 }
+    t.eq(config.options.virtual_text.format(entry, config.options), '● 7')
+  end,
+
+  ['an empty prefix and label leave only the number'] = function(t)
+    config.setup({ virtual_text = { prefix = '', label = '' } })
+    local entry = { cyclomatic = 7, cognitive = 3 }
+    t.eq(config.options.virtual_text.format(entry, config.options), '7')
+  end,
 }
