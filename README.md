@@ -306,7 +306,19 @@ scripts/check-reference.py
 ```
 
 CI runs the suite against Neovim 0.11, stable and nightly, plus stylua,
-luacheck, and the reference check above. Grammars are pinned by revision in
+luacheck, the reference check above, and a full differential:
+
+```bash
+scripts/differential.py
+```
+
+That one runs the plugin over each language's own standard library and compares
+every function against the reference tool — around 9000 of them, where the
+fixtures pin a few dozen. It is what catches a rule that is right in isolation
+and wrong in company. Go cyclomatic is held to exact agreement; the rest have a
+documented tolerance, since their differences are the known ones. Dart has no
+working tool and JavaScript's needs the Node source tree, so both stay pinned by
+fixtures alone. Grammars are pinned by revision in
 `scripts/install-parsers.sh` — a grammar change has to break CI visibly rather
 than quietly altering everyone's numbers.
 

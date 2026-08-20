@@ -89,3 +89,50 @@ jobs:
       # the plugin's own past output.
       - name: Check fixtures against the reference tools
         run: scripts/check-reference.py
+
+  differential:
+    name: differential
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+
+      - name: Cache tree-sitter parsers
+        uses: actions/cache@v4
+        with:
+          path: .ci/parsers
+          key: parsers-${{ runner.os }}-${{ hashFiles('scripts/install-parsers.sh') }}
+
+      - name: Build tree-sitter parsers
+        run: scripts/install-parsers.sh
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install the reference tools
+        run: |
+          go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+          go install github.com/uudashr/gocognit/cmd/gocognit@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          pip install --quiet radon
+          sudo apt-get update
+          sudo apt-get install -y lua5.1 luarocks
+          sudo luarocks install luacheck
+
+      # The fixtures pin a few dozen constructs. This runs the whole thing
+      # across thousands of real functions from each language's own standard
+      # library, which is what catches a rule that is right in isolation and
+      # wrong in company. `--strict` makes a missing tool a failure, so the step
+      # cannot pass by quietly checking nothing.
+      - name: Differential against the reference tools
+        run: scripts/differential.py --strict

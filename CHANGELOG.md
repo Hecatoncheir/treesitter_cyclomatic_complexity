@@ -7,6 +7,29 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-08-20
+
+### Added
+
+- `scripts/differential.py`, and a CI job that runs it. It compares the plugin
+  against each language's reference tool over that language's own standard
+  library -- around 9000 functions, where the fixtures pin a few dozen -- which
+  is what catches a rule that is right in isolation and wrong in company. Go
+  cyclomatic is held to exact agreement; the others carry a tolerance covering
+  their documented differences.
+- `scripts/dump-complexity.lua`, which prints the plugin's numbers for a list
+  of files, in either nesting mode. Reference tools disagree about whether a
+  closure belongs to the function around it, so a comparison has to be made in
+  whichever mode the tool itself uses.
+
+### Notes
+
+- `--strict` makes a missing tool a failure rather than a skip, so the CI step
+  cannot pass by quietly checking nothing. Verified both ways, along with the
+  regression it is meant to catch.
+- Dart and JavaScript are not covered: Dart has no working reference tool, and
+  JavaScript's needs the Node source tree. Both remain pinned by fixtures.
+
 ## [0.9.0] - 2026-08-20
 
 ### Added
@@ -248,7 +271,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.6.0...v0.7.0
