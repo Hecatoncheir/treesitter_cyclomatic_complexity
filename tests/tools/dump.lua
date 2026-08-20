@@ -31,8 +31,19 @@ local root = parser:parse()[1]:root()
 local function field_name(parent, child)
   -- There is no "list all fields" API, so probe the names grammars commonly use.
   for _, name in ipairs({
-    'name', 'body', 'condition', 'consequence', 'alternative', 'operator',
-    'left', 'right', 'value', 'initializer', 'update', 'parameters', 'key',
+    'name',
+    'body',
+    'condition',
+    'consequence',
+    'alternative',
+    'operator',
+    'left',
+    'right',
+    'value',
+    'initializer',
+    'update',
+    'parameters',
+    'key',
   }) do
     for _, candidate in ipairs(parent:field(name)) do
       if candidate:id() == child:id() then

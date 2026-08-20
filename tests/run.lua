@@ -1,81 +1,64 @@
---- Fixture-driven test runner.
+--- Test runner.
 ---
----   nvim --headless -l tests/run.lua
+---   nvim --headless -l tests/run.lua              -- everything
+---   nvim --headless -l tests/run.lua analyzer     -- specs matching "analyzer"
 ---
---- Each fixture carries its own expectations as `// EXPECT <name> cc=<n> cog=<n>`
---- comments. The Go numbers are the ones gocyclo and gocognit produce for the
---- same file, so the suite pins this plugin to the reference tools rather than
---- to its own past output.
+--- Every file in tests/spec/ returns a table of `['what it does'] = function(t)`.
+--- `t` is tests/helpers.lua. A test fails by raising, which the runner catches,
+--- so one broken case never hides the rest.
 local root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:match('@?(.+)$'), ':h:h')
 vim.opt.runtimepath:append(root)
 package.path = root .. '/lua/?.lua;' .. root .. '/lua/?/init.lua;' .. package.path
+package.path = root .. '/tests/?.lua;' .. package.path
 
-local analyzer = require('cyclomatic.analyzer')
+-- `nvim -l` does not source plugin/ files, so load ours the way a real session
+-- would; the integration specs drive the :Cyclomatic command.
+dofile(root .. '/plugin/cyclomatic.lua')
 
-local EXTENSIONS = { go = 'go', dart = 'dart', lua = 'lua', py = 'python' }
+-- The plugin notifies on several commands. Silence it so the suite's own
+-- output stays readable; the specs that assert on a notification install their
+-- own stub around the call they care about.
+vim.notify = function() end
 
-local passed, failed = 0, 0
-local out = {}
+local helpers = require('helpers')
+local filter = _G.arg and _G.arg[1]
 
+local passed, failed, out = 0, 0, {}
+
+---@param fmt string
 local function log(fmt, ...)
   out[#out + 1] = select('#', ...) > 0 and fmt:format(...) or fmt
 end
 
----@param path string
-local function run_fixture(path)
-  local source = table.concat(vim.fn.readfile(path), '\n')
-  local lang = EXTENSIONS[path:match('%.(%w+)$')]
-  local name = path:match('[^/]+$')
+local specs = vim.fn.glob(root .. '/tests/spec/*_spec.lua', false, true)
+table.sort(specs)
 
-  local expectations, order = {}, {}
-  for line in source:gmatch('[^\n]+') do
-    local fn, cc, cog = line:match('EXPECT%s+(.-)%s+cc=(%d+)%s+cog=(%d+)')
-    if fn then
-      expectations[fn] = { cyclomatic = tonumber(cc), cognitive = tonumber(cog) }
-      order[#order + 1] = fn
-    end
-  end
-
-  local result, err = analyzer.analyze_string(source, lang)
-  if not result then
-    failed = failed + 1
-    log('  FAIL %s -- analysis failed: %s', name, tostring(err))
-    return
-  end
-
-  local actual = {}
-  for _, entry in ipairs(result.entries) do
-    actual[entry.name] = entry
-  end
-
-  for _, fn in ipairs(order) do
-    local want, got = expectations[fn], actual[fn]
-    if not got then
+for _, path in ipairs(specs) do
+  local name = path:match('([^/]+)_spec%.lua$')
+  if not filter or name:find(filter, 1, true) then
+    local ok, spec = pcall(dofile, path)
+    if not ok then
       failed = failed + 1
-      log('  FAIL %s :: %s -- not found', name, fn)
-    elseif got.cyclomatic ~= want.cyclomatic or got.cognitive ~= want.cognitive then
-      failed = failed + 1
-      log(
-        '  FAIL %s :: %s -- want cc=%d cog=%d, got cc=%d cog=%d',
-        name, fn, want.cyclomatic, want.cognitive, got.cyclomatic, got.cognitive
-      )
+      log('FAIL %s -- could not load: %s', name, tostring(spec))
     else
-      passed = passed + 1
+      local cases = vim.tbl_keys(spec)
+      table.sort(cases)
+      for _, case in ipairs(cases) do
+        -- Each case starts from a clean configuration so ordering cannot
+        -- leak state between them.
+        helpers.configure({})
+        local success, err = pcall(spec[case], helpers)
+        if success then
+          passed = passed + 1
+        else
+          failed = failed + 1
+          local message = type(err) == 'table' and err.message or tostring(err)
+          log('FAIL %s :: %s', name, case)
+          log('       %s', message)
+        end
+      end
     end
   end
-
-  for _, entry in ipairs(result.entries) do
-    if not expectations[entry.name] then
-      failed = failed + 1
-      log('  FAIL %s :: %s -- unexpected entry (cc=%d)', name, entry.name, entry.cyclomatic)
-    end
-  end
-end
-
-local fixtures = vim.fn.glob(root .. '/tests/fixtures/*/*', false, true)
-table.sort(fixtures)
-for _, path in ipairs(fixtures) do
-  run_fixture(path)
 end
 
 log('')

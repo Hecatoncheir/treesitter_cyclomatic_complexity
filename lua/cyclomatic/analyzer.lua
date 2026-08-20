@@ -266,11 +266,11 @@ local function walk_tree(query, root, source)
   ---@param node TSNode
   ---@return string
   local function sequence_root(node)
-    local root, parent = node, node:parent()
+    local outermost, parent = node, node:parent()
     while parent and is_sequence(parent) do
-      root, parent = parent, parent:parent()
+      outermost, parent = parent, parent:parent()
     end
-    return root:id()
+    return outermost:id()
   end
 
   local entries = {}

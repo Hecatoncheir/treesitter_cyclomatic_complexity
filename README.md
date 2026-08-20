@@ -1,5 +1,9 @@
 # treesitter_cyclomatic_complexity
 
+[![CI](https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/actions/workflows/ci.yml/badge.svg)](https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/actions/workflows/ci.yml)
+[![Neovim](https://img.shields.io/badge/Neovim-0.10%2B-57A143?logo=neovim&logoColor=white)](https://neovim.io)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Cyclomatic and cognitive complexity for Neovim, computed entirely from
 tree-sitter. Pure Lua, no external binaries, no LSP.
 
@@ -169,14 +173,43 @@ comments and run the suite.
 
 ## Tests
 
+The suite needs nothing but Neovim and the two tree-sitter parsers. Build the
+parsers once, then run it:
+
 ```bash
-nvim --headless -l tests/run.lua
+scripts/install-parsers.sh
 ```
 
-Expectations live beside the code they describe, as comments in the fixtures.
-The Go numbers are the values gocyclo and gocognit produce for those same files,
-so the suite pins this plugin to the reference tools rather than to its own
-previous output.
+```bash
+nvim --headless -u NONE --cmd "set rtp+=$PWD/.ci/parsers" -l tests/run.lua
+```
+
+With the parsers already on your runtimepath, `nvim --headless -l tests/run.lua`
+is enough. Pass a name to run a subset — `... -l tests/run.lua analyzer`.
+
+Cases live in `tests/spec/`. Fixture expectations live beside the code they
+describe, as `EXPECT <name> cc=<n> cog=<n>` comments, and the Go numbers are the
+values gocyclo and gocognit produce for those same files. That claim is itself
+checked, so the suite cannot drift into asserting only its own past output:
+
+```bash
+scripts/check-reference.py
+```
+
+CI runs the suite against Neovim 0.10, stable and nightly, plus stylua,
+luacheck, and the reference check above. Grammars are pinned by revision in
+`scripts/install-parsers.sh` — a grammar change has to break CI visibly rather
+than quietly altering everyone's numbers.
+
+## Releasing
+
+Tagging `vX.Y.Z` builds a GitHub release automatically. The notes come from the
+matching `CHANGELOG.md` section, and a tag without one fails the workflow before
+anything is published:
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
 
 ## Limitations
 

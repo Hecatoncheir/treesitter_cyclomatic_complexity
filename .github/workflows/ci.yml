@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (nvim ${{ matrix.neovim }})
+    runs-on: ubuntu-latest
+    # Nightly tracks an unreleased Neovim, so a break there is news rather than
+    # a reason to fail the run.
+    continue-on-error: ${{ matrix.neovim == 'nightly' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # v0.10 is the minimum the README promises; it is tested, not assumed.
+        neovim: ['v0.10.4', 'stable', 'nightly']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Neovim ${{ matrix.neovim }}
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.neovim }}
+
+      # Grammars are pinned by revision in the script, so the cache key only has
+      # to follow the script itself.
+      - name: Cache tree-sitter parsers
+        uses: actions/cache@v4
+        with:
+          path: .ci/parsers
+          key: parsers-${{ runner.os }}-${{ hashFiles('scripts/install-parsers.sh') }}
+
+      - name: Build tree-sitter parsers
+        run: scripts/install-parsers.sh
+
+      - name: Run tests
+        run: nvim --headless -u NONE --cmd "set rtp+=$PWD/.ci/parsers" -l tests/run.lua
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: stylua
+        uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: --check lua/ plugin/ tests/
+
+      - name: Install luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1 luarocks
+          sudo luarocks install luacheck
+
+      - name: luacheck
+        run: luacheck lua/ plugin/ tests/
+
+  reference:
+    name: reference agreement
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Install gocyclo and gocognit
+        run: |
+          go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+          go install github.com/uudashr/gocognit/cmd/gocognit@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # The Go fixtures state what gocyclo and gocognit produce. This proves
+      # that claim is still true, so the suite cannot drift into asserting only
+      # the plugin's own past output.
+      - name: Check fixtures against the reference tools
+        run: scripts/check-reference.py

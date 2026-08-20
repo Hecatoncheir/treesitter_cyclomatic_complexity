@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: release ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Release notes come from CHANGELOG.md, and a tag without a section fails
+      # here -- before anything is published -- rather than producing a release
+      # with an empty body.
+      - name: Extract release notes
+        id: notes
+        run: |
+          {
+            echo 'body<<CHANGELOG_EOF'
+            scripts/changelog-section.py "${{ github.ref_name }}"
+            echo 'CHANGELOG_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+
+      - name: Cache tree-sitter parsers
+        uses: actions/cache@v4
+        with:
+          path: .ci/parsers
+          key: parsers-${{ runner.os }}-${{ hashFiles('scripts/install-parsers.sh') }}
+
+      - name: Build tree-sitter parsers
+        run: scripts/install-parsers.sh
+
+      # A tag is not a reason to skip the suite: nothing gets published unless
+      # it passes.
+      - name: Run tests
+        run: nvim --headless -u NONE --cmd "set rtp+=$PWD/.ci/parsers" -l tests/run.lua
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: ${{ steps.notes.outputs.body }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
