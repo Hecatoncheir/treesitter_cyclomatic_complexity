@@ -6,7 +6,10 @@
 --- Every file in tests/spec/ returns a table of `['what it does'] = function(t)`.
 --- `t` is tests/helpers.lua. A test fails by raising, which the runner catches,
 --- so one broken case never hides the rest.
-local root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:match('@?(.+)$'), ':h:h')
+-- `:p` matters: run as `nvim -l tests/run.lua`, the script path is relative,
+-- and a relative runtimepath entry is not searched for query files on
+-- Neovim 0.10 even though it is on later versions.
+local root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:match('@?(.+)$'), ':p:h:h')
 vim.opt.runtimepath:append(root)
 package.path = root .. '/lua/?.lua;' .. root .. '/lua/?/init.lua;' .. package.path
 package.path = root .. '/tests/?.lua;' .. package.path

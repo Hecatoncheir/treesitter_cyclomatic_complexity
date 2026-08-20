@@ -75,7 +75,7 @@ function M.contains(haystack, needle, what)
 end
 
 --- Root of the repository.
-M.root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:match('@?(.+)$'), ':h:h')
+M.root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:match('@?(.+)$'), ':p:h:h')
 
 --- Create a scratch buffer with content and a filetype, and make it current.
 ---@param filetype string

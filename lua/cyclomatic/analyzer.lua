@@ -22,8 +22,11 @@ local SEMANTICS = {
 
 local QUERY_NAME = 'cyclomatic'
 
---- Languages we already know have (or lack) a query, so repeated lookups on
---- unsupported buffers stay cheap.
+--- Lookup results per language, so repeated lookups on unsupported buffers stay
+--- cheap. The failure reason is cached alongside: a missing query and a parser
+--- whose ABI the running Neovim cannot load are very different problems, and
+--- only one of them is the user's to fix.
+---@type table<string, { query: vim.treesitter.Query|nil, err: string|nil }>
 local query_cache = {}
 
 --- Fetch the complexity query for a language.
@@ -32,19 +35,22 @@ local query_cache = {}
 ---@return string|nil err
 function M.get_query(lang)
   local cached = query_cache[lang]
-  if cached ~= nil then
-    if cached == false then
-      return nil
-    end
-    return cached
+  if cached then
+    return cached.query, cached.err
   end
-  local ok, query = pcall(vim.treesitter.query.get, lang, QUERY_NAME)
+
+  local ok, result = pcall(vim.treesitter.query.get, lang, QUERY_NAME)
+  local entry
   if not ok then
-    query_cache[lang] = false
-    return nil, tostring(query)
+    entry = { err = tostring(result) }
+  elseif not result then
+    entry = { err = 'no ' .. QUERY_NAME .. ' query for ' .. lang }
+  else
+    entry = { query = result }
   end
-  query_cache[lang] = query or false
-  return query or nil
+
+  query_cache[lang] = entry
+  return entry.query, entry.err
 end
 
 --- Drop cached queries so edited .scm files are picked up without a restart.

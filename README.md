@@ -1,7 +1,7 @@
 # treesitter_cyclomatic_complexity
 
 [![CI](https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/actions/workflows/ci.yml/badge.svg)](https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/actions/workflows/ci.yml)
-[![Neovim](https://img.shields.io/badge/Neovim-0.10%2B-57A143?logo=neovim&logoColor=white)](https://neovim.io)
+[![Neovim](https://img.shields.io/badge/Neovim-0.11%2B-57A143?logo=neovim&logoColor=white)](https://neovim.io)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Cyclomatic and cognitive complexity for Neovim, computed entirely from
@@ -46,8 +46,9 @@ lazy.nvim:
 ```
 
 `main = 'cyclomatic'` is required — the Lua module name differs from the repo
-name. Needs Neovim 0.10+ and a tree-sitter parser for the language you are
-editing (`go` and `dart`).
+name. Needs Neovim 0.11+ and a tree-sitter parser for the language you are
+editing (`go` and `dart`). Neovim 0.10 loads only tree-sitter ABI 13-14, which
+current Go and Dart grammars have outgrown.
 
 ## Configuration
 
@@ -196,7 +197,7 @@ checked, so the suite cannot drift into asserting only its own past output:
 scripts/check-reference.py
 ```
 
-CI runs the suite against Neovim 0.10, stable and nightly, plus stylua,
+CI runs the suite against Neovim 0.11, stable and nightly, plus stylua,
 luacheck, and the reference check above. Grammars are pinned by revision in
 `scripts/install-parsers.sh` — a grammar change has to break CI visibly rather
 than quietly altering everyone's numbers.

@@ -7,6 +7,23 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-20
+
+### Changed
+
+- **The minimum supported Neovim is 0.11, not 0.10.** 0.1.0 claimed 0.10 on the
+  strength of an API audit; CI then showed that current Go and Dart grammars
+  compile to tree-sitter ABI 15, which 0.10 cannot load -- it accepts 13 to 14.
+  Nothing in the plugin's own code needed 0.11. The floor is now tested on every
+  run rather than reasoned about.
+
+### Fixed
+
+- A failed query lookup reported its reason only once. Every call after the
+  first fell back to a generic "no cyclomatic query for <lang>", hiding messages
+  worth acting on -- an ABI mismatch above all. The reason is now cached with
+  the failure and reported every time.
+
 ## [0.1.0] - 2026-08-20
 
 First release.
@@ -51,5 +68,6 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/releases/tag/v0.1.0

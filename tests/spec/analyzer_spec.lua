@@ -97,6 +97,18 @@ return {
     t.contains(err, 'yaml')
   end,
 
+  ['the reason survives the cached lookup'] = function(t)
+    -- Regression: the cache used to remember only *that* a language failed, so
+    -- the second call onwards reported a generic "no query" no matter what had
+    -- actually gone wrong. A parser Neovim cannot load reports an ABI mismatch,
+    -- which is worth seeing; losing it turns a fixable problem into a puzzle.
+    analyzer.reload()
+    local _, first = analyzer.get_query('yaml')
+    local _, second = analyzer.get_query('yaml')
+    t.truthy(first, 'the first lookup explains itself')
+    t.eq(second, first, 'and so does every one after it')
+  end,
+
   ['an empty source yields no entries'] = function(t)
     local result = analyzer.analyze_string('', 'go')
     t.truthy(result)

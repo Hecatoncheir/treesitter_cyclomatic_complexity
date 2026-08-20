@@ -3,8 +3,8 @@ if vim.g.loaded_cyclomatic then
 end
 vim.g.loaded_cyclomatic = true
 
-if vim.fn.has('nvim-0.10') == 0 then
-  vim.notify('cyclomatic.nvim requires Neovim 0.10 or newer', vim.log.levels.ERROR)
+if vim.fn.has('nvim-0.11') == 0 then
+  vim.notify('cyclomatic.nvim requires Neovim 0.11 or newer', vim.log.levels.ERROR)
   return
 end
 

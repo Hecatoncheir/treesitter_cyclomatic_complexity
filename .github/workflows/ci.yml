@@ -20,8 +20,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # v0.10 is the minimum the README promises; it is tested, not assumed.
-        neovim: ['v0.10.4', 'stable', 'nightly']
+        # v0.11 is the minimum the README promises; it is tested, not assumed.
+        neovim: ['v0.11.5', 'stable', 'nightly']
 
     steps:
       - uses: actions/checkout@v4
