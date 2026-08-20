@@ -26,7 +26,8 @@ M.defaults = {
     -- Only annotate functions at or above this complexity. Set to 1 to
     -- annotate everything, including trivial getters.
     min_complexity = 4,
-    -- prefix = '●',
+    -- Needs a Nerd Font. Without one, '●' is a safe alternative that renders
+    -- in practically any font.
     prefix = '󰓧',
 
     -- Text between the prefix and the number. A table keeps a label per metric,

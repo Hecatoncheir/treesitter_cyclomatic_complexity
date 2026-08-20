@@ -107,9 +107,9 @@ return {
 
   ['a custom label reaches the rendered annotation'] = function(t)
     local bufnr = bucket_buffer(t)
-    config.setup({ virtual_text = { min_complexity = 1, label = 'Complexity' } })
+    config.setup({ virtual_text = { min_complexity = 1, prefix = '#', label = 'Complexity' } })
     draw(bufnr)
-    t.contains(table.concat(t.annotations(bufnr), ' '), '● Complexity 25')
+    t.contains(table.concat(t.annotations(bufnr), ' '), '# Complexity 25')
   end,
 
   ['a custom format function controls the text'] = function(t)

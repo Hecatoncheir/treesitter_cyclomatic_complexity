@@ -23,7 +23,11 @@ return {
   ['setup() merges deeply instead of replacing nested tables'] = function(t)
     config.setup({ virtual_text = { min_complexity = 99 } })
     t.eq(config.options.virtual_text.min_complexity, 99)
-    t.eq(config.options.virtual_text.prefix, '●', 'untouched nested keys survive')
+    t.eq(
+      config.options.virtual_text.prefix,
+      config.defaults.virtual_text.prefix,
+      'untouched nested keys survive'
+    )
     t.truthy(config.options.virtual_text.format, 'the default format function survives')
   end,
 
@@ -35,11 +39,13 @@ return {
   end,
 
   ['the default label follows the metric being shown'] = function(t)
-    config.setup({})
+    -- An explicit prefix: which glyph ships as the default is cosmetic, and a
+    -- test that pins it fails for a reason that has nothing to do with labels.
+    config.setup({ virtual_text = { prefix = '#' } })
     local entry = { cyclomatic = 7, cognitive = 3 }
-    t.eq(config.options.virtual_text.format(entry, config.options), '● CC 7')
-    config.setup({ metric = 'cognitive' })
-    t.eq(config.options.virtual_text.format(entry, config.options), '● COG 3')
+    t.eq(config.options.virtual_text.format(entry, config.options), '# CC 7')
+    config.setup({ metric = 'cognitive', virtual_text = { prefix = '#' } })
+    t.eq(config.options.virtual_text.format(entry, config.options), '# COG 3')
   end,
 
   ['label can be set per metric'] = function(t)
@@ -64,9 +70,9 @@ return {
   end,
 
   ['an empty label leaves just the prefix and the number'] = function(t)
-    config.setup({ virtual_text = { label = '' } })
+    config.setup({ virtual_text = { prefix = '#', label = '' } })
     local entry = { cyclomatic = 7, cognitive = 3 }
-    t.eq(config.options.virtual_text.format(entry, config.options), '● 7')
+    t.eq(config.options.virtual_text.format(entry, config.options), '# 7')
   end,
 
   ['an empty prefix and label leave only the number'] = function(t)

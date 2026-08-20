@@ -19,8 +19,14 @@ local GO = table.concat({
 ---@return integer bufnr
 local function setup_buffer(helpers, opts)
   local bufnr = helpers.buffer('go', GO)
+  -- An explicit prefix, so these specs assert on behaviour rather than on
+  -- whichever glyph currently ships as the default.
   cyclomatic.setup(
-    vim.tbl_deep_extend('force', { virtual_text = { min_complexity = 1 } }, opts or {})
+    vim.tbl_deep_extend(
+      'force',
+      { virtual_text = { min_complexity = 1, prefix = '#' } },
+      opts or {}
+    )
   )
   cyclomatic.refresh(bufnr)
   return bufnr
@@ -29,7 +35,7 @@ end
 return {
   ['setup() annotates an already-open buffer'] = function(t)
     local bufnr = setup_buffer(t)
-    t.eq(t.annotations(bufnr), { 'L3 ● CC 5' })
+    t.eq(t.annotations(bufnr), { 'L3 # CC 5' })
   end,
 
   ['get() reuses the analysis until the buffer changes'] = function(t)
@@ -53,7 +59,7 @@ return {
     t.eq(t.annotations(bufnr), {}, 'disable clears the annotations')
 
     cyclomatic.enable()
-    t.eq(t.annotations(bufnr), { 'L3 ● CC 5' }, 'enable must redraw, not trust the cache')
+    t.eq(t.annotations(bufnr), { 'L3 # CC 5' }, 'enable must redraw, not trust the cache')
   end,
 
   ['toggle() works per buffer'] = function(t)
@@ -89,7 +95,7 @@ return {
     setup_buffer(t)
     local lualine = require('cyclomatic.lualine')
     vim.api.nvim_win_set_cursor(0, { 5, 0 })
-    t.eq(lualine.status(), '● 5')
+    t.eq(lualine.status(), '# 5')
     t.eq(lualine.color(), 'CyclomaticLow')
 
     vim.api.nvim_win_set_cursor(0, { 1, 0 })

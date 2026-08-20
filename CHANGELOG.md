@@ -7,6 +7,22 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- A screenshot in the README, in place of the ASCII mock-up that stood for one.
+
+### Changed
+
+- The default `virtual_text.prefix` is a Nerd Font glyph. Without a patched font
+  it renders as a placeholder box, so both the README and the option itself now
+  say so and name `●` as the fallback.
+
+### Fixed
+
+- Specs no longer assert on the default prefix. Changing a cosmetic default
+  broke seven of them, which is a test problem rather than a real one: those
+  cases now set the prefix they expect.
+
 ## [0.5.0] - 2026-08-20
 
 ### Added

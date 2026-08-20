@@ -10,9 +10,7 @@ tree-sitter. Pure Lua, no external binaries, no LSP.
 Complexity is shown as end-of-line virtual text on each function's signature,
 coloured by how bad it is:
 
-```
-func (s *Server) Handle(w http.ResponseWriter, r *Request) error {   ● CC 14
-```
+![Cognitive complexity annotated inline on a Flutter build method](preview.png)
 
 **Languages: Go, Dart and Lua.** Adding another is a query file, not code — see
 [doc/ADDING-A-LANGUAGE.md](doc/ADDING-A-LANGUAGE.md) for a worked example, and
@@ -93,7 +91,7 @@ opts = {
   virtual_text = {
     enabled = true,
     min_complexity = 4,   -- leave trivial functions unannotated
-    prefix = '●',
+    prefix = '󰓧',      -- needs a Nerd Font; '●' renders in almost any font
     -- Text between the prefix and the number. See below.
     label = { cyclomatic = 'CC', cognitive = 'COG' },
     -- Only needed to change the *shape* of the annotation; `prefix` and
@@ -124,9 +122,12 @@ opts = {
 
 ```lua
 virtual_text = { prefix = '', label = 'complexity' }      --  complexity 14
-virtual_text = { prefix = '󰅩', label = '' }                --  󰅩 14
-virtual_text = { label = { cyclomatic = 'Cyc' } }         --  ● Cyc 14
+virtual_text = { prefix = '●', label = '' }               --  ● 14
+virtual_text = { label = { cyclomatic = 'Cyc' } }         --  󰓧 Cyc 14
 ```
+
+The default prefix is a Nerd Font glyph. If yours is not a patched font it will
+render as a placeholder box — set `prefix = '●'`, which almost any font has.
 
 `label` is a table because `:Cyclomatic metric` switches metrics while the
 annotations are on screen, and a single fixed string would start lying the
