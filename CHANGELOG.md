@@ -7,6 +7,18 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-20
+
+### Added
+
+- `tests/fixtures/dart/constructs.dart`, pinning 17 Dart constructs one per
+  function, cross-checked against `dart_code_metrics` 5.7.6. It confirms 13
+  outright; on the four it disputes -- `do`/`while`, two- and three-case
+  `switch`, and `yield` -- it also contradicts `gocyclo` and `luacheck` scoring
+  the equivalent construct, so it is the outlier. It finds no decision at all in
+  a three-way switch. Provenance is recorded per construct in the fixture and
+  summarised in the README.
+
 ## [0.4.0] - 2026-08-20
 
 ### Added
@@ -119,7 +131,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.1...v0.2.0

@@ -30,12 +30,31 @@ Go on 1620 functions from the Go standard library (`net/http`, `encoding/json`,
 | Go | Cyclomatic | `gocyclo` | Go standard library | **1620 / 1620 exact** |
 | Go | Cognitive | `gocognit` | Go standard library | **1106 / 1118 exact** |
 | Lua | Cyclomatic | `luacheck` | Neovim runtime | **911 / 917 exact** |
+| Dart | Cyclomatic | `dart_code_metrics` | 17 isolated constructs | **13 / 17 agree** |
 
 All 12 Go cognitive differences are recursion, which `gocognit` charges a point
 for and this plugin does not — see [Limitations](#limitations). The Lua figure
 is measured in `nested_functions = 'separate'`, which is the model luacheck
-uses; Dart has no comparable reference tool, and its rules are covered by
-fixtures instead.
+uses.
+
+Dart deserves its own sentence, because 13 of 17 is the honest number and it
+understates the case. `dart_code_metrics` is the only Dart complexity tool still
+runnable, it was sunset in 2023, and on the four constructs where it disagrees
+it is demonstrably the one in error:
+
+| Construct | It says | This plugin | Corroboration |
+| --- | --- | --- | --- |
+| `do { } while (c)` | 1 | 2 | `luacheck` scores Lua's `repeat…until` 2 |
+| `switch` with 2 cases | 1 | 3 | `gocyclo` scores the same switch in Go 3 |
+| `switch` with 3 cases | 1 | 4 | `gocyclo` scores it 4 |
+| `sync*` with `yield` | 3 | 2 | a suspension point is not a branch |
+
+So it finds no decision at all in a three-way switch, and does not count a
+do-while loop. Every one of those calls also contradicts `gocyclo` and
+`luacheck` on the equivalent construct, which is what settles them. The
+constructs and their provenance are pinned in
+`tests/fixtures/dart/constructs.dart`. Dart 3 pattern switches have no reference
+at all — the tool predates them.
 
 ## Install
 
