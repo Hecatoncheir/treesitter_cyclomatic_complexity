@@ -7,6 +7,21 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-20
+
+### Added
+
+- `:Cyclomatic explain` accounts for the score of the function under the
+  cursor: every point counted, what it contributed to each metric, and how
+  deeply it was nested. A number alone cannot distinguish a disagreement about
+  the rules from a bug in the query. Operators are listed apart from their
+  runs, since `a && b && c` costs two cyclomatically and one cognitively, and a
+  report that hid that would look wrong. The suite checks the account
+  reconciles with the score for every function in every fixture, in both
+  nesting modes.
+- `:help cyclomatic`. The documentation was Markdown only, which is not where
+  Neovim users read it.
+
 ## [0.6.0] - 2026-08-20
 
 ### Added
@@ -184,7 +199,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.1...v0.5.0

@@ -49,6 +49,10 @@ local subcommands = {
     end
     vim.notify('cyclomatic: showing ' .. wanted .. ' complexity', vim.log.levels.INFO)
   end,
+  explain = function()
+    require('cyclomatic.explain').open(0)
+  end,
+
   scaffold = function(args)
     local bufnr = vim.api.nvim_get_current_buf()
     local lang = args[1] or require('cyclomatic.analyzer').buf_lang(bufnr)

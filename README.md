@@ -167,12 +167,38 @@ vim.api.nvim_set_hl(0, 'CyclomaticVeryHigh', { fg = '#ea6962', bold = true })
 | `:Cyclomatic metric [cyclomatic\|cognitive]` | switch metric, or flip it with no argument |
 | `:Cyclomatic list` | functions in this buffer, most complex first |
 | `:Cyclomatic project [root]` | same across the project (async) |
+| `:Cyclomatic explain` | account for the score under the cursor, point by point |
 | `:Cyclomatic scaffold [lang]` | draft a `cyclomatic.scm` from the current buffer |
 | `:Cyclomatic info` | language, support status, score at the cursor |
 | `:Cyclomatic reload` | re-read query files after editing one |
 
 `list` and `project` use `snacks.picker` when it is installed and fall back to
 the quickfix list otherwise.
+
+### Explaining a score
+
+A number is not much use when it looks wrong: you cannot tell a disagreement
+about the rules from a bug in the query without seeing what was counted.
+`:Cyclomatic explain` shows the account:
+
+```
+mixed  --  cyclomatic 6, cognitive 7
+
+  line     cc    cog  what                     source
+  ---------------------------------------------------------------
+     3     +1         function baseline        func mixed(a, b, c ..
+     4     +1     +1  branch                   if a && b && c {
+     4     +1      -  operator                 if a && b && c {
+     4     +1      -  operator                 if a && b && c {
+     4            +1  operator run             if a && b && c {
+     5     +1     +2  branch, nested 1 deep    for i := 0; i < n; ..
+```
+
+Operators show `-` in the cognitive column because the cost of a run is settled
+only once every operator in it is known — `a && b && c` is two paths but one
+thing to read — so the run is listed on its own line. The suite checks that the
+account reconciles with the score for every function in every fixture, in both
+nesting modes.
 
 ## lualine
 
@@ -274,6 +300,14 @@ anything is published:
 ```bash
 git tag v0.1.0 && git push origin v0.1.0
 ```
+
+## Documentation
+
+`:help cyclomatic` covers configuration, commands, highlight groups and the API
+from inside the editor. In the repository,
+[doc/ADDING-A-LANGUAGE.md](doc/ADDING-A-LANGUAGE.md) walks through adding a
+language and [doc/CONTRACT.md](doc/CONTRACT.md) documents the capture
+vocabulary.
 
 ## Troubleshooting
 

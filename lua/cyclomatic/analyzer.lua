@@ -164,7 +164,7 @@ local function sequence_cost(ops)
     table.insert(groups[op.group], op)
   end
 
-  local total = 0
+  local total, starts = 0, {}
   for _, key in ipairs(order) do
     local group = groups[key]
     table.sort(group, function(x, y)
@@ -177,11 +177,14 @@ local function sequence_cost(ops)
     for _, op in ipairs(group) do
       if op.id ~= previous then
         total = total + 1
+        -- Which operator opened each run, so `explain` can say why
+        -- `a and b and c` costs two cyclomatically but one cognitively.
+        starts[#starts + 1] = op
         previous = op.id
       end
     end
   end
-  return total
+  return total, starts
 end
 
 --- Collect capture information for one syntax tree.
@@ -264,7 +267,33 @@ end
 ---@param source integer|string
 ---@return CyclomaticEntry[] entries
 ---@return table file_level
-local function walk_tree(query, root, source)
+--- @param frame table
+--- @param node TSNode
+--- @param capture string
+--- @param cyc integer
+--- @param cog integer|nil nil while an operator's cognitive cost is undecided
+--- @param nesting integer
+local function trace(frame, node, capture, cyc, cog, nesting)
+  if not frame.contributions then
+    return
+  end
+  local row, col = node:start()
+  frame.contributions[#frame.contributions + 1] = {
+    row = row,
+    col = col,
+    node_type = node:type(),
+    capture = capture,
+    cyclomatic = cyc,
+    cognitive = cog,
+    nesting = nesting,
+  }
+end
+
+--- @param query vim.treesitter.Query
+--- @param root TSNode
+--- @param source integer|string
+--- @param tracing boolean|nil record what each point contributed, for `explain`
+local function walk_tree(query, root, source, tracing)
   local marks, bodies = collect(query, root, source)
   local separate = config.options.nested_functions == 'separate'
 
@@ -298,7 +327,12 @@ local function walk_tree(query, root, source)
   end
 
   local entries = {}
-  local file_level = { cyclomatic = 0, cognitive = 0, ops = {} }
+  local file_level = {
+    cyclomatic = 0,
+    cognitive = 0,
+    ops = {},
+    contributions = tracing and {} or nil,
+  }
 
   --- @param node TSNode
   --- @param frame table|nil  the function currently accumulating
@@ -318,9 +352,23 @@ local function walk_tree(query, root, source)
           cognitive = 0,
           nested = frame ~= nil,
           ops = {},
+          contributions = tracing and {} or nil,
         }
         entries[#entries + 1] = frame
         nesting = 0
+        if frame.contributions then
+          -- Against the signature row, not the body's first statement: that is
+          -- the line the reader associates with the function.
+          frame.contributions[1] = {
+            row = frame.row,
+            col = 0,
+            node_type = node:type(),
+            capture = 'function.body',
+            cyclomatic = 1,
+            cognitive = 0,
+            nesting = 0,
+          }
+        end
       else
         -- Inlined into the enclosing function: its branches keep counting
         -- toward `frame`, but they sit one level deeper.
@@ -355,8 +403,13 @@ local function walk_tree(query, root, source)
               -- Deferred: the cognitive cost of operators depends on how they
               -- group into runs, which is only knowable once all of them are in.
               record_operator(target, node, sequence_root(node))
+              trace(target, node, capture, sem.cyc, nil, nesting)
             elseif sem.cog > 0 then
-              target.cognitive = target.cognitive + sem.cog + (flat and 0 or nesting)
+              local cog = sem.cog + (flat and 0 or nesting)
+              target.cognitive = target.cognitive + cog
+              trace(target, node, capture, sem.cyc, cog, nesting)
+            else
+              trace(target, node, capture, sem.cyc, 0, nesting)
             end
           end
 
@@ -385,12 +438,37 @@ local function walk_tree(query, root, source)
 
   visit(root, nil, 0)
 
-  for _, frame in ipairs(entries) do
-    frame.cognitive = frame.cognitive + sequence_cost(frame.ops)
-    frame.ops = nil
+  --- @param target table
+  local function finalize(target)
+    local cost, starts = sequence_cost(target.ops)
+    target.cognitive = target.cognitive + cost
+    if target.contributions then
+      for _, op in ipairs(starts) do
+        target.contributions[#target.contributions + 1] = {
+          row = op.row,
+          col = op.col,
+          node_type = op.id,
+          capture = 'operator run',
+          cyclomatic = 0,
+          cognitive = 1,
+          nesting = 0,
+        }
+      end
+      -- Source order, so the account reads the way the code does.
+      table.sort(target.contributions, function(a, b)
+        if a.row ~= b.row then
+          return a.row < b.row
+        end
+        return (a.col or 0) < (b.col or 0)
+      end)
+    end
+    target.ops = nil
   end
-  file_level.cognitive = file_level.cognitive + sequence_cost(file_level.ops)
-  file_level.ops = nil
+
+  for _, frame in ipairs(entries) do
+    finalize(frame)
+  end
+  finalize(file_level)
 
   return entries, file_level
 end
@@ -402,9 +480,10 @@ end
 
 --- Analyze a buffer.
 ---@param bufnr integer
+---@param opts { trace: boolean }|nil record what each point contributed
 ---@return CyclomaticResult|nil
 ---@return string|nil err
-function M.analyze(bufnr)
+function M.analyze(bufnr, opts)
   bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
   if not vim.api.nvim_buf_is_loaded(bufnr) then
     return nil, 'buffer not loaded'
@@ -427,7 +506,7 @@ function M.analyze(bufnr)
 
   local entries, file_level = {}, { cyclomatic = 0, cognitive = 0 }
   for _, tree in ipairs(parser:parse() or {}) do
-    local got, file = walk_tree(query, tree:root(), bufnr)
+    local got, file = walk_tree(query, tree:root(), bufnr, opts and opts.trace)
     vim.list_extend(entries, got)
     file_level.cyclomatic = file_level.cyclomatic + file.cyclomatic
     file_level.cognitive = file_level.cognitive + file.cognitive
@@ -446,9 +525,10 @@ end
 --- Analyze a string. Used by the project-wide scan, which never opens buffers.
 ---@param source string
 ---@param lang string
+---@param opts { trace: boolean }|nil record what each point contributed
 ---@return CyclomaticResult|nil
 ---@return string|nil err
-function M.analyze_string(source, lang)
+function M.analyze_string(source, lang, opts)
   local query, err = M.get_query(lang)
   if not query then
     return nil, err or ('no cyclomatic query for ' .. lang)
@@ -457,11 +537,33 @@ function M.analyze_string(source, lang)
   if not ok or not parser then
     return nil, 'no parser for ' .. lang
   end
-  local entries, file_level = walk_tree(query, parser:parse()[1]:root(), source)
+  local entries, file_level =
+    walk_tree(query, parser:parse()[1]:root(), source, opts and opts.trace)
   table.sort(entries, function(a, b)
     return a.row < b.row
   end)
   return { lang = lang, entries = entries, file_level = file_level }
+end
+
+--- Analyze a buffer with tracing on and return the entry containing `row`,
+--- together with the record of what each decision point contributed.
+---
+--- Separate from analyze() because tracing costs work on every node, and the
+--- normal path runs on every keystroke.
+---@param bufnr integer
+---@param row integer 0-indexed
+---@return CyclomaticEntry|nil entry with a `contributions` list
+---@return string|nil err
+function M.explain(bufnr, row)
+  local result, err = M.analyze(bufnr, { trace = true })
+  if not result then
+    return nil, err
+  end
+  local entry = M.entry_at(result, row)
+  if not entry then
+    return nil, 'no function at this line'
+  end
+  return entry
 end
 
 --- The entry whose body contains `row`, innermost first.

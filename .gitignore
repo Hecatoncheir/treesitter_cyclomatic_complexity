@@ -42,3 +42,6 @@ luac.out
 
 # Parsers built for the test suite
 .ci/
+
+# Generated help tags
+doc/tags

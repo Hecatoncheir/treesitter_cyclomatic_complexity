@@ -1,0 +1,276 @@
+*cyclomatic.txt*   Cyclomatic and cognitive complexity, from tree-sitter
+
+Author:   https://github.com/Hecatoncheir
+License:  MIT
+Requires: Neovim 0.11 or newer
+
+==============================================================================
+CONTENTS                                                  *cyclomatic-contents*
+
+  1. Introduction ................................ |cyclomatic-introduction|
+  2. Requirements ................................ |cyclomatic-requirements|
+  3. Setup ....................................... |cyclomatic-setup|
+  4. Configuration ............................... |cyclomatic-configuration|
+  5. Highlights .................................. |cyclomatic-highlights|
+  6. Commands .................................... |cyclomatic-commands|
+  7. Statusline .................................. |cyclomatic-statusline|
+  8. API ......................................... |cyclomatic-api|
+  9. What counts ................................. |cyclomatic-metrics|
+ 10. Adding a language ........................... |cyclomatic-languages|
+ 11. Troubleshooting ............................. |cyclomatic-health|
+ 12. Limitations ................................. |cyclomatic-limitations|
+
+==============================================================================
+1. INTRODUCTION                                       *cyclomatic-introduction*
+                                                                  *cyclomatic*
+
+Shows the cyclomatic or cognitive complexity of every function as virtual text
+at the end of its signature, coloured by how high it is.
+
+Everything is computed from tree-sitter. There is no language server, no
+external binary and no shell-out; the metric is purely syntactic, which is
+exactly the question a parse tree can answer.
+
+Language rules live in query files, not in Lua, so a language can be added
+without touching the plugin — see |cyclomatic-languages|.
+
+==============================================================================
+2. REQUIREMENTS                                       *cyclomatic-requirements*
+
+- Neovim 0.11 or newer.
+- A tree-sitter parser for the language being edited.
+
+Neovim 0.10 will not work. It loads only tree-sitter ABI 13 to 14, which the
+current Go, Dart and Python grammars have outgrown; the failure appears as a
+parser that cannot be loaded rather than as anything to do with this plugin.
+|:checkhealth| says so explicitly.
+
+Queries ship for `go`, `dart`, `lua` and `python`. Lua's parser comes with
+Neovim; the others must be installed.
+
+==============================================================================
+3. SETUP                                                     *cyclomatic-setup*
+
+With lazy.nvim: >lua
+
+    {
+      'Hecatoncheir/treesitter_cyclomatic_complexity',
+      main = 'cyclomatic',
+      event = { 'BufReadPost', 'BufNewFile' },
+      opts = {},
+    }
+<
+`main = 'cyclomatic'` is required: the Lua module name differs from the
+repository name, and without it lazy.nvim will not find |cyclomatic.setup()|.
+
+                                                          *cyclomatic.setup()*
+setup({opts})
+
+    Applies configuration, defines the highlight groups and installs the
+    autocommands. Invalid options are reported through |vim.notify()| and
+    replaced with working values rather than left to fail later.
+
+==============================================================================
+4. CONFIGURATION                                     *cyclomatic-configuration*
+
+Defaults, all optional: >lua
+
+    require('cyclomatic').setup({
+      metric = 'cyclomatic',
+      nested_functions = 'inline',
+      thresholds = { low = 5, medium = 10, high = 20 },
+      virtual_text = {
+        enabled = true,
+        min_complexity = 4,
+        prefix = '󰓧',
+        label = { cyclomatic = 'CC', cognitive = 'COG' },
+        position = 'eol',
+        priority = 100,
+      },
+      diagnostics = { enabled = false, min_complexity = 11 },
+      events = { 'BufReadPost', 'BufWritePost', 'TextChanged', 'InsertLeave' },
+      debounce = 250,
+      filetypes = nil,
+      exclude_filetypes = {},
+      max_filesize = 512 * 1024,
+    })
+<
+                                                        *cyclomatic-opt-metric*
+metric ~
+    Which metric the annotation shows: `'cyclomatic'` or `'cognitive'`.
+    See |cyclomatic-metrics|.
+
+                                              *cyclomatic-opt-nested_functions*
+nested_functions ~
+    `'inline'`   a closure's branches count toward the function holding it,
+                 which is what gocyclo does.
+    `'separate'` every closure is reported on its own, which is what luacheck
+                 and radon do.
+
+                                                    *cyclomatic-opt-thresholds*
+thresholds ~
+    Bucket boundaries for colour and for diagnostic severity. Must increase.
+
+                                                  *cyclomatic-opt-virtual_text*
+virtual_text ~
+    `min_complexity`  leaves anything below it unannotated.
+    `prefix`          text before the number. The default is a Nerd Font
+                      glyph; without a patched font it renders as a
+                      placeholder box, and `'●'` works in almost any font.
+    `label`           text between prefix and number. A table keyed by metric,
+                      because |:Cyclomatic| `metric` switches between them
+                      while annotations are on screen and one fixed string
+                      would start lying the moment it was flipped. A plain
+                      string is accepted for both; `''` shows just the number.
+    `format`          `fun(entry, cfg): string`, for a different shape
+                      entirely. `prefix` and `label` cover the wording.
+
+                                                   *cyclomatic-opt-diagnostics*
+diagnostics ~
+    Off by default. Turning it on publishes complexity through
+    |vim.diagnostic|, which routes it into the quickfix list, the sign column,
+    |]d| and anything else reading diagnostics, with no further setup.
+
+==============================================================================
+5. HIGHLIGHTS                                           *cyclomatic-highlights*
+
+                    *hl-CyclomaticLow* *hl-CyclomaticMedium*
+                    *hl-CyclomaticHigh* *hl-CyclomaticVeryHigh*
+
+    CyclomaticLow        at or below `thresholds.low`
+    CyclomaticMedium     at or below `thresholds.medium`
+    CyclomaticHigh       at or below `thresholds.high`
+    CyclomaticVeryHigh   above it
+
+All link to the |diagnostic-highlights| by default, so they follow the
+colourscheme. Override any of them: >lua
+
+    vim.api.nvim_set_hl(0, 'CyclomaticHigh', { fg = '#ea6962' })
+<
+==============================================================================
+6. COMMANDS                                               *cyclomatic-commands*
+
+                                                                *:Cyclomatic*
+:Cyclomatic [subcommand] [args]
+
+    With no subcommand, toggles the annotations.
+
+    toggle                    toggle annotations
+    enable                    turn them on
+    disable                   turn them off
+    refresh                   recompute the current buffer
+    metric [name]             switch to `cyclomatic` or `cognitive`; with no
+                              argument, flips to the other one
+    list                      functions in this buffer, most complex first
+    project [root]            the same across the project, asynchronously
+    explain                   account for the score of the function under the
+                              cursor, point by point |cyclomatic-explain|
+    scaffold [lang]           draft a query file from the current buffer
+                              |cyclomatic-languages|
+    info                      language, support status, score at the cursor
+    reload                    re-read query files after editing one
+
+`list` and `project` use snacks.picker when it is installed, and fall back to
+the |quickfix| list otherwise.
+
+                                                        *cyclomatic-explain*
+`:Cyclomatic explain` opens a report showing every point that was counted, what
+it contributed to each metric, and how deeply it was nested: >
+
+    mixed  --  cyclomatic 6, cognitive 7
+
+      line     cc    cog  what                     source
+      ---------------------------------------------------------------
+         3     +1         function baseline        func mixed(a, b, c ..
+         4     +1     +1  branch                   if a && b && c {
+         4     +1      -  operator                 if a && b && c {
+         4     +1      -  operator                 if a && b && c {
+         4            +1  operator run             if a && b && c {
+<
+Operators show `-` in the cognitive column because the cost of a run is
+settled only once every operator in it is known: `a && b && c` is two paths
+but one thing to read, so it costs two cyclomatically and one cognitively.
+The run appears on its own line.
+
+==============================================================================
+7. STATUSLINE                                           *cyclomatic-statusline*
+
+A lualine component showing the complexity of the function under the cursor,
+coloured by the same buckets: >lua
+
+    sections = { lualine_x = { require('cyclomatic.lualine') } }
+<
+==============================================================================
+8. API                                                         *cyclomatic-api*
+
+>lua
+    local cc = require('cyclomatic')
+
+    cc.get(bufnr)        -- { lang, entries, file_level }, or nil
+    cc.current()         -- the entry under the cursor, or nil
+    cc.supported(bufnr)  -- is there a query for this buffer's language?
+    cc.refresh(bufnr)
+    cc.enable(bufnr)     -- omit bufnr for global
+    cc.disable(bufnr)
+    cc.toggle(bufnr)
+    cc.reload()          -- re-read query files
+<
+Each entry is `{ name, row, end_row, cyclomatic, cognitive, nested }`, with
+0-indexed rows.
+
+==============================================================================
+9. WHAT COUNTS                                             *cyclomatic-metrics*
+
+Cyclomatic complexity starts at 1 per function and adds one for each `if`,
+`else if`, loop, non-default `case`, exception handler, ternary, and each
+`&&`, `||` or `??`. A plain `else` and a `default` add nothing: they introduce
+no independent path.
+
+Cognitive complexity follows SonarSource. Branches cost more the deeper they
+are nested, `else` costs a flat point, and a run of the same boolean operator
+costs one point rather than one per operator.
+
+The numbers are checked against each language's established tool over a real
+corpus — gocyclo, gocognit, luacheck and radon — rather than asserted. The
+figures, and the handful of deliberate disagreements, are in the README.
+
+==============================================================================
+10. ADDING A LANGUAGE                                    *cyclomatic-languages*
+
+Write `queries/<lang>/cyclomatic.scm`. No Lua changes are needed: Neovim finds
+the file by |runtimepath|, which also means a file in your own configuration
+at `~/.config/nvim/queries/<lang>/cyclomatic.scm` overrides the shipped rules.
+
+`:Cyclomatic scaffold` drafts one from the current buffer. What it emits is
+always valid query syntax, names the grammar shapes that fail silently, and
+lists the constructs your sample never exercised.
+
+`doc/ADDING-A-LANGUAGE.md` in the repository walks the whole job command by
+command, and `doc/CONTRACT.md` documents the capture vocabulary.
+
+==============================================================================
+11. TROUBLESHOOTING                                         *cyclomatic-health*
+
+>vim
+    :checkhealth cyclomatic
+<
+Most of what goes wrong is not the plugin: a parser missing, a parser whose
+ABI this Neovim cannot load, or a grammar whose node names have moved. All
+three would otherwise surface as the same unhelpful message. The health check
+names them apart, validates the configuration, and lists which open buffers
+are being measured.
+
+==============================================================================
+12. LIMITATIONS                                        *cyclomatic-limitations*
+
+These follow from what a parse tree can and cannot know.
+
+- Recursion is not counted. Detecting it needs symbol resolution, which
+  tree-sitter does not do, and matching on the function's name instead is
+  worse than not trying.
+- Declarations without a body are skipped. There is nothing to measure.
+- Only the root language of a buffer is analyzed. Injected languages, such as
+  SQL inside a string, are not.
+- Branches generated inside a macro are invisible.
+
+vim:tw=78:ts=8:ft=help:norl:
