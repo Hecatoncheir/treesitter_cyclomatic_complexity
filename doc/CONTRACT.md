@@ -62,6 +62,9 @@ path.
 
 ## Adding a language
 
+[ADDING-A-LANGUAGE.md](ADDING-A-LANGUAGE.md) walks through it end to end, using
+Lua as the worked example. In short:
+
 1. Find the node names: `:InspectTree` on a file, or
    `nvim --headless -l tests/tools/dump.lua <file> <lang>`.
 2. Write `queries/<lang>/cyclomatic.scm`. Start from `queries/go/cyclomatic.scm`.

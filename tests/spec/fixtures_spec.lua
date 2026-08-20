@@ -7,7 +7,7 @@
 local analyzer = require('cyclomatic.analyzer')
 local helpers = require('helpers')
 
-local EXTENSIONS = { go = 'go', dart = 'dart' }
+local EXTENSIONS = { go = 'go', dart = 'dart', lua = 'lua' }
 
 local spec = {}
 

@@ -14,8 +14,9 @@ coloured by how bad it is:
 func (s *Server) Handle(w http.ResponseWriter, r *Request) error {   ● CC 14
 ```
 
-**Languages: Go and Dart.** Adding another is a query file, not code — see
-[doc/CONTRACT.md](doc/CONTRACT.md).
+**Languages: Go, Dart and Lua.** Adding another is a query file, not code — see
+[doc/ADDING-A-LANGUAGE.md](doc/ADDING-A-LANGUAGE.md) for a worked example, and
+[doc/CONTRACT.md](doc/CONTRACT.md) for the capture vocabulary.
 
 ## Why this can be trusted
 
@@ -24,13 +25,17 @@ parse tree can answer. The numbers are checked against the reference tools for
 Go on 1620 functions from the Go standard library (`net/http`, `encoding/json`,
 `go/parser`, `strings`, `time`):
 
-| Metric | Reference | Agreement |
-| --- | --- | --- |
-| Cyclomatic | `gocyclo` | **1620 / 1620 exact** |
-| Cognitive | `gocognit` | **1106 / 1118 exact** |
+| Language | Metric | Reference | Corpus | Agreement |
+| --- | --- | --- | --- | --- |
+| Go | Cyclomatic | `gocyclo` | Go standard library | **1620 / 1620 exact** |
+| Go | Cognitive | `gocognit` | Go standard library | **1106 / 1118 exact** |
+| Lua | Cyclomatic | `luacheck` | Neovim runtime | **911 / 917 exact** |
 
-All 12 cognitive differences are recursion, which `gocognit` charges a point for
-and this plugin does not — see [Limitations](#limitations).
+All 12 Go cognitive differences are recursion, which `gocognit` charges a point
+for and this plugin does not — see [Limitations](#limitations). The Lua figure
+is measured in `nested_functions = 'separate'`, which is the model luacheck
+uses; Dart has no comparable reference tool, and its rules are covered by
+fixtures instead.
 
 ## Install
 
@@ -47,8 +52,8 @@ lazy.nvim:
 
 `main = 'cyclomatic'` is required — the Lua module name differs from the repo
 name. Needs Neovim 0.11+ and a tree-sitter parser for the language you are
-editing (`go` and `dart`). Neovim 0.10 loads only tree-sitter ABI 13-14, which
-current Go and Dart grammars have outgrown.
+editing (`go` and `dart`; Lua's is bundled with Neovim). Neovim 0.10 loads only
+tree-sitter ABI 13-14, which current Go and Dart grammars have outgrown.
 
 ## Configuration
 
@@ -163,14 +168,9 @@ Write `queries/<lang>/cyclomatic.scm`. No Lua changes are needed — Neovim find
 the file by runtimepath, which also means you can override the shipped rules by
 putting your own version in `~/.config/nvim/queries/<lang>/cyclomatic.scm`.
 
-Inspect a grammar with:
-
-```bash
-nvim --headless -l tests/tools/dump.lua path/to/file.rs rust
-```
-
-Then add a fixture under `tests/fixtures/` with `EXPECT <name> cc=<n> cog=<n>`
-comments and run the suite.
+[doc/ADDING-A-LANGUAGE.md](doc/ADDING-A-LANGUAGE.md) walks through the whole
+process on Lua, including the two places the obvious query would have been
+wrong and the traps that fail silently rather than erroring.
 
 ## Tests
 

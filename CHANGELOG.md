@@ -7,6 +7,18 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-20
+
+### Added
+
+- **Lua support** (`queries/lua/cyclomatic.scm`). Cyclomatic complexity matches
+  `luacheck` on 911 of 917 functions across Neovim's own runtime, measured in
+  the `separate` nesting mode luacheck uses.
+- `doc/ADDING-A-LANGUAGE.md`: a worked example of adding a language, following
+  the Lua path end to end -- reading the grammar, the two places its shape
+  forced the query away from the Go one, validating against a reference tool,
+  and the failure modes that produce wrong numbers instead of errors.
+
 ## [0.1.1] - 2026-08-20
 
 ### Changed
@@ -68,6 +80,7 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/releases/tag/v0.1.0
