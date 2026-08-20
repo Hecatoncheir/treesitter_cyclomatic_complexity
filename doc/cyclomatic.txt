@@ -41,12 +41,12 @@ without touching the plugin — see |cyclomatic-languages|.
 - A tree-sitter parser for the language being edited.
 
 Neovim 0.10 will not work. It loads only tree-sitter ABI 13 to 14, which the
-current Go, Dart and Python grammars have outgrown; the failure appears as a
-parser that cannot be loaded rather than as anything to do with this plugin.
-|:checkhealth| says so explicitly.
+current Go, Dart, Python and JavaScript grammars have outgrown; the failure
+appears as a parser that cannot be loaded rather than as anything to do with
+this plugin. |:checkhealth| says so explicitly.
 
-Queries ship for `go`, `dart`, `lua` and `python`. Lua's parser comes with
-Neovim; the others must be installed.
+Queries ship for `go`, `dart`, `lua`, `python` and `javascript`. Lua's parser
+comes with Neovim; the others must be installed.
 
 ==============================================================================
 3. SETUP                                                     *cyclomatic-setup*
@@ -231,8 +231,9 @@ are nested, `else` costs a flat point, and a run of the same boolean operator
 costs one point rather than one per operator.
 
 The numbers are checked against each language's established tool over a real
-corpus — gocyclo, gocognit, luacheck and radon — rather than asserted. The
-figures, and the handful of deliberate disagreements, are in the README.
+corpus — gocyclo, gocognit, luacheck, radon and ESLint's `complexity` rule —
+rather than asserted. The figures, and the handful of deliberate
+disagreements, are in the README.
 
 ==============================================================================
 10. ADDING A LANGUAGE                                    *cyclomatic-languages*

@@ -45,7 +45,7 @@ return {
   ['it adds up across every fixture, in both nesting modes'] = function(t)
     local config = require('cyclomatic.config')
     local fixtures = vim.fn.glob(t.root .. '/tests/fixtures/*/*', false, true)
-    local extensions = { go = 'go', dart = 'dart', lua = 'lua', py = 'python' }
+    local extensions = { go = 'go', dart = 'dart', lua = 'lua', py = 'python', js = 'javascript' }
 
     for _, mode in ipairs({ 'inline', 'separate' }) do
       config.setup({ nested_functions = mode })

@@ -12,7 +12,7 @@ coloured by how bad it is:
 
 ![Cognitive complexity annotated inline on a Flutter build method](preview.png)
 
-**Languages: Go, Dart, Lua and Python.** Adding another is a query file, not
+**Languages: Go, Dart, Lua, Python and JavaScript.** Adding another is a query file, not
 code — see [doc/ADDING-A-LANGUAGE.md](doc/ADDING-A-LANGUAGE.md), which walks the
 whole job command by command, and [doc/CONTRACT.md](doc/CONTRACT.md) for the
 capture vocabulary.
@@ -30,17 +30,29 @@ each language's established tool over a real corpus:
 | Lua | Cyclomatic | `luacheck` | Neovim runtime | **911 / 917 exact** |
 | Python | Cyclomatic | `radon` | Python standard library | **2134 / 2138 exact** |
 | Dart | Cyclomatic | `dart_code_metrics` | 17 isolated constructs | **13 / 17 agree** |
+| JavaScript | Cyclomatic | ESLint `complexity` | Node.js `lib/` (v22.9.0) | **6766 / 6766 exact** |
 
 All 12 Go cognitive differences are recursion, which `gocognit` charges a point
-for and this plugin does not — see [Limitations](#limitations). The Lua figure
-is measured in `nested_functions = 'separate'`, which is the model luacheck
-uses.
+for and this plugin does not — see [Limitations](#limitations). The Lua and
+JavaScript figures are measured in `nested_functions = 'separate'`, which is
+the model luacheck and ESLint both use: every function is scored on its own,
+never folded into the one holding it.
 
 All four Python differences are `assert`: radon counts the statement but does
 not descend into its condition, scoring `assert a and b` the same as
 `assert a` — while counting that same `and` in an `if` or a `return`. The
 operator is counted here, which is the only reading consistent across the three
 contexts.
+
+JavaScript's agreement with ESLint's `complexity` rule is exact rather than
+partial because, unlike radon or luacheck, nothing about it had to be
+guessed — the same "lower the threshold until everything trips it" trick
+(`complexity: ["error", 0]`) settled two rules the grammar alone would not:
+optional chaining (`obj?.a?.b?.()`) is not a branch, but the logical
+assignment operators `??=`, `||=` and `&&=` are, exactly like `??`, `||` and
+`&&`. ESLint also scores every class field initializer and `static {}` block
+as its own unit; this plugin does not, for the same reason no other language
+here creates an entry for plain top-level code.
 
 Dart deserves its own sentence, because 13 of 17 is the honest number and it
 understates the case. `dart_code_metrics` is the only Dart complexity tool still
@@ -58,8 +70,14 @@ So it finds no decision at all in a three-way switch, and does not count a
 do-while loop. Every one of those calls also contradicts `gocyclo` and
 `luacheck` on the equivalent construct, which is what settles them. The
 constructs and their provenance are pinned in
-`tests/fixtures/dart/constructs.dart`. Dart 3 pattern switches have no reference
-at all — the tool predates them.
+`tests/fixtures/dart/constructs.dart`.
+
+[`dart-code-linter`](https://github.com/bancolombia/dart-code-linter) 4.2.1, the
+maintained fork, was checked and does not help: it returns identical numbers on
+all 17 constructs, the three defects included. It is a fork for Dart 3 *syntax*
+support and carries the metric over unchanged — it parses a four-arm pattern
+switch without complaint and scores it 1. Dart cognitive complexity has no
+reference implementation at all.
 
 ## Install
 
@@ -76,8 +94,9 @@ lazy.nvim:
 
 `main = 'cyclomatic'` is required — the Lua module name differs from the repo
 name. Needs Neovim 0.11+ and a tree-sitter parser for the language you are
-editing (`go`, `dart`, `python`; Lua's is bundled with Neovim). Neovim 0.10
-loads only tree-sitter ABI 13-14, which current grammars have outgrown.
+editing (`go`, `dart`, `python`, `javascript`; Lua's is bundled with Neovim).
+Neovim 0.10 loads only tree-sitter ABI 13-14, which current grammars have
+outgrown.
 
 ## Configuration
 

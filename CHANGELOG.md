@@ -7,6 +7,26 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-20
+
+### Added
+
+- **JavaScript support** (`queries/javascript/cyclomatic.scm`). Cyclomatic
+  complexity matches ESLint's `complexity` rule on all 6766 functions across
+  Node.js's own `lib/` (v22.9.0), measured in `nested_functions = 'separate'`,
+  the mode ESLint always reports in. The same "lower the threshold until
+  everything trips it" trick used for luacheck settled two rules the grammar
+  alone would not have: optional chaining (`obj?.a?.b?.()`) is not a branch,
+  but the logical assignment operators `??=`, `||=` and `&&=` are, exactly
+  like `??`, `||` and `&&`. `else` is never a direct child of `if_statement`
+  here, unlike Go and Dart — both a plain `else` and an `else if` sit inside
+  an intermediate `else_clause` wrapper that carries no score of its own.
+  Closures are named from their binding wherever JavaScript allows one: a
+  `const`, a plain or prototype assignment, an object-literal property, or a
+  class field holding an arrow function.
+- The JavaScript grammar in `scripts/install-parsers.sh`, pinned to the
+  commit behind its `v0.25.0` tag rather than the tag itself.
+
 ## [0.7.0] - 2026-08-20
 
 ### Added
@@ -199,7 +219,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.0...v0.5.1

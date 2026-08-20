@@ -23,6 +23,8 @@ GRAMMARS=(
   "dart|https://github.com/UserNobody14/tree-sitter-dart|be07cf7118d3dba06236a3f19541685a68209934"
   # tree-sitter-python v0.25.0, resolved to its commit: a tag can move.
   "python|https://github.com/tree-sitter/tree-sitter-python|293fdc02038ee2bf0e2e206711b69c90ac0d413f"
+  # tree-sitter-javascript v0.25.0, resolved to its commit: a tag can move.
+  "javascript|https://github.com/tree-sitter/tree-sitter-javascript|44c892e0be055ac465d5eeddae6d3e194424e7de"
 )
 
 WORK="$(mktemp -d)"
