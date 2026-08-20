@@ -26,7 +26,8 @@ M.defaults = {
     -- Only annotate functions at or above this complexity. Set to 1 to
     -- annotate everything, including trivial getters.
     min_complexity = 4,
-    prefix = '●',
+    -- prefix = '●',
+    prefix = '󰓧',
 
     -- Text between the prefix and the number. A table keeps a label per metric,
     -- which matters because `:Cyclomatic metric` switches between them while
