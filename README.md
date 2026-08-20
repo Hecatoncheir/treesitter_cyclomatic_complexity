@@ -265,6 +265,31 @@ anything is published:
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
+## Troubleshooting
+
+```vim
+:checkhealth cyclomatic
+```
+
+Most of what goes wrong here is not the plugin's own doing — a parser that is
+missing, or one built against a tree-sitter ABI the running Neovim cannot load,
+or a grammar whose node names have moved. All three used to surface as the same
+unhelpful `no cyclomatic query for <lang>`, several steps from the cause. The
+health check names them apart:
+
+```
+cyclomatic.nvim: languages ~
+- OK    go: parser and query both load
+- ERROR dart: parser found, but its ABI is not loadable by this Neovim
+  - ABI version mismatch for .../parser/dart.so: supported between 13 and 14, found 15
+  - Rebuild the parser, or run a newer Neovim.
+- WARN  zig: no parser installed
+```
+
+It also validates the configuration — an invalid `metric` used to surface as
+`attempt to compare number with nil` from the renderer — and lists which open
+buffers are being measured and which are not.
+
 ## Limitations
 
 These are deliberate, and all of them follow from what a parse tree can and

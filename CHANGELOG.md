@@ -7,6 +7,23 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-20
+
+### Added
+
+- `:checkhealth cyclomatic`. A missing parser, a parser whose tree-sitter ABI
+  the running Neovim cannot load, and a query whose node names no longer exist
+  all used to surface as the same `no cyclomatic query for <lang>`, several
+  steps from the cause. Each is now named and given its own remedy, alongside a
+  configuration check and a list of which open buffers are being measured.
+
+### Fixed
+
+- An invalid `metric` no longer breaks rendering. It surfaced as `attempt to
+  compare number with nil` from the renderer, nowhere near the typo that caused
+  it; `setup()` now validates its options, says what is wrong, and falls back to
+  a usable value instead of leaving the plugin broken.
+
 ## [0.4.1] - 2026-08-20
 
 ### Added
@@ -131,7 +148,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.2.0...v0.3.0

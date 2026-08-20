@@ -61,6 +61,24 @@ function M.reload()
   end
 end
 
+--- Every language with a complexity query anywhere on the runtimepath.
+---
+--- Found by glob rather than from a hard-coded list, so a query dropped into a
+--- user's own config directory counts as support.
+---@return string[]
+function M.languages()
+  local found = {}
+  for _, path in ipairs(vim.api.nvim_get_runtime_file('queries/*/' .. QUERY_NAME .. '.scm', true)) do
+    local lang = path:match('queries/([^/]+)/')
+    if lang then
+      found[lang] = true
+    end
+  end
+  local out = vim.tbl_keys(found)
+  table.sort(out)
+  return out
+end
+
 --- Resolve the tree-sitter language for a buffer.
 ---@param bufnr integer
 ---@return string|nil
