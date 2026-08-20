@@ -63,6 +63,12 @@ With lazy.nvim: >lua
 `main = 'cyclomatic'` is required: the Lua module name differs from the
 repository name, and without it lazy.nvim will not find |cyclomatic.setup()|.
 
+No `dependencies` entry is needed, nvim-treesitter included. This plugin uses
+|vim.treesitter| from Neovim itself, finds parsers on the 'runtimepath' and
+finds its own queries the same way; nvim-treesitter is one way to install
+parsers, not something this loads. A parser installed mid-session is picked up
+on the next analysis, so there is no load-order requirement either.
+
                                                           *cyclomatic.setup()*
 setup({opts})
 

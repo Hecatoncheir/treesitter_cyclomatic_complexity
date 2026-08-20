@@ -98,6 +98,15 @@ editing (`go`, `dart`, `python`, `javascript`; Lua's is bundled with Neovim).
 Neovim 0.10 loads only tree-sitter ABI 13-14, which current grammars have
 outgrown.
 
+**No `dependencies` entry is needed**, `nvim-treesitter` included. Nothing here
+requires it: the plugin uses `vim.treesitter` from Neovim itself, finds parsers
+on the runtimepath, and finds its own queries the same way. nvim-treesitter is
+one way to install parsers, not something this loads. Declaring it as a
+dependency only forces it to load whenever this plugin does.
+
+A parser installed mid-session is picked up on the next analysis, so there is no
+load-order requirement to work around either.
+
 ## Configuration
 
 Defaults, all optional:

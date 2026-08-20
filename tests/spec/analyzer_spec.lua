@@ -97,7 +97,7 @@ return {
     t.contains(err, 'yaml')
   end,
 
-  ['the reason survives the cached lookup'] = function(t)
+  ['the reason is given every time, not just the first'] = function(t)
     -- Regression: the cache used to remember only *that* a language failed, so
     -- the second call onwards reported a generic "no query" no matter what had
     -- actually gone wrong. A parser Neovim cannot load reports an ABI mismatch,
@@ -107,6 +107,29 @@ return {
     local _, second = analyzer.get_query('yaml')
     t.truthy(first, 'the first lookup explains itself')
     t.eq(second, first, 'and so does every one after it')
+  end,
+
+  ['a query that arrives later is picked up'] = function(t)
+    -- Regression: failures used to be cached, so a query or parser installed
+    -- mid-session -- or one on a runtimepath entry added after first use --
+    -- was never noticed, and the plugin reported it missing until a reload.
+    -- That is the symptom people work around by declaring a plugin dependency
+    -- they do not actually need.
+    local lang = 'query'
+    analyzer.reload()
+    t.eq(analyzer.get_query(lang), nil, 'nothing for it yet')
+
+    local dir = vim.fn.tempname()
+    vim.fn.mkdir(dir .. '/queries/' .. lang, 'p')
+    vim.fn.writefile({ '(program) @decision' }, dir .. '/queries/' .. lang .. '/cyclomatic.scm')
+    vim.opt.runtimepath:append(dir)
+
+    local found = analyzer.get_query(lang)
+    vim.opt.runtimepath:remove(dir)
+    vim.fn.delete(dir, 'rf')
+    analyzer.reload()
+
+    t.truthy(found, 'it should be found without a reload')
   end,
 
   ['an empty source yields no entries'] = function(t)

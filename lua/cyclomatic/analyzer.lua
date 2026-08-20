@@ -32,11 +32,14 @@ local QUERY_NAME = 'cyclomatic'
 ---@type table<integer, { mode: string, bodies: table<string, table> }>
 local subtree_cache = {}
 
---- Lookup results per language, so repeated lookups on unsupported buffers stay
---- cheap. The failure reason is cached alongside: a missing query and a parser
---- whose ABI the running Neovim cannot load are very different problems, and
---- only one of them is the user's to fix.
----@type table<string, { query: vim.treesitter.Query|nil, err: string|nil }>
+--- Successful lookups per language.
+---
+--- Only successes. A failure used to be cached too, which meant a query or
+--- parser that arrived after first use -- installed mid-session, or on a
+--- runtimepath entry added late -- was never picked up, and the plugin went on
+--- reporting a missing query until a reload. Neovim memoizes its own query
+--- lookups, so a miss costs about two microseconds; there was nothing to buy.
+---@type table<string, vim.treesitter.Query>
 local query_cache = {}
 
 --- Fetch the complexity query for a language.
@@ -46,21 +49,22 @@ local query_cache = {}
 function M.get_query(lang)
   local cached = query_cache[lang]
   if cached then
-    return cached.query, cached.err
+    return cached
   end
 
   local ok, result = pcall(vim.treesitter.query.get, lang, QUERY_NAME)
-  local entry
   if not ok then
-    entry = { err = tostring(result) }
-  elseif not result then
-    entry = { err = 'no ' .. QUERY_NAME .. ' query for ' .. lang }
-  else
-    entry = { query = result }
+    -- An unloadable parser, an ABI mismatch, a query that no longer compiles:
+    -- all different problems, and the message is the only thing that tells them
+    -- apart. `:checkhealth cyclomatic` reads them.
+    return nil, tostring(result)
+  end
+  if not result then
+    return nil, 'no ' .. QUERY_NAME .. ' query for ' .. lang
   end
 
-  query_cache[lang] = entry
-  return entry.query, entry.err
+  query_cache[lang] = result
+  return result
 end
 
 --- Drop cached queries so edited .scm files are picked up without a restart.

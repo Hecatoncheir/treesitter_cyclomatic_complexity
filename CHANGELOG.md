@@ -7,6 +7,26 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-08-20
+
+### Fixed
+
+- A query or parser that arrived after first use was never picked up. Failed
+  lookups were cached alongside successful ones, so a parser installed
+  mid-session, or a query on a runtimepath entry added late, left the plugin
+  reporting it missing until `:Cyclomatic reload`. Only successes are cached
+  now: Neovim memoizes its own query lookups, so a miss costs about two
+  microseconds and the cache was buying nothing.
+
+### Added
+
+- The README and `:help cyclomatic` now say that no `dependencies` entry is
+  needed, nvim-treesitter included. Nothing here requires it -- the plugin uses
+  `vim.treesitter` from Neovim itself and finds parsers and queries on the
+  runtimepath -- and declaring it only forces it to load whenever this plugin
+  does. The stale-failure bug above was the one thing that could have made a
+  load-order dependency look necessary.
+
 ## [0.9.1] - 2026-08-20
 
 ### Added
@@ -271,7 +291,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.7.0...v0.8.0
