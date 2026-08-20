@@ -320,6 +320,26 @@ anything is published:
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
+## Performance
+
+Analysis reuses the functions tree-sitter did not have to rebuild. A node's id
+survives an incremental reparse for any subtree that did not change — and
+rebuilding a subtree rebuilds its ancestors, so an unchanged id means nothing
+inside changed either. Editing one function therefore re-walks one function.
+
+| File | Functions | Full | With reuse |
+| --- | --- | --- | --- |
+| `net/http/server.go` | 155 | 25.7 ms | **13.2 ms** |
+| `net/http/transport.go` | 120 | 22.0 ms | **9.1 ms** |
+| `strings/strings.go` | 61 | 9.2 ms | **6.0 ms** |
+
+Inserting a line above a function shifts its rows without touching its id, so
+cached rows are rebased rather than trusted. A stale entry would produce a
+plausible wrong number rather than an error, so the suite compares the
+incremental answer against one computed from scratch after every kind of edit —
+shifts, edits inside a function, added and removed functions, and both nesting
+modes.
+
 ## Documentation
 
 `:help cyclomatic` covers configuration, commands, highlight groups and the API

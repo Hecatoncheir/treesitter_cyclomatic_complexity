@@ -6,6 +6,10 @@
 // with gocyclo and luacheck scoring the equivalent construct, so it is the
 // outlier rather than this plugin. See README, "Why this can be trusted".
 //
+// dart-code-linter 4.2.1, the maintained fork, was checked too and returns
+// identical numbers here, the disputed four included: it forks for Dart 3
+// syntax support and carries the metric over unchanged. Not worth re-testing.
+//
 // cog values are computed by hand -- no Dart tool implements the metric.
 
 // EXPECT p01_if cc=2 cog=1

@@ -7,6 +7,35 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-20
+
+### Added
+
+- Analysis now reuses the functions tree-sitter did not have to rebuild,
+  roughly halving the cost of a recompute on a large file: 25.7 ms to 13.2 ms
+  on `net/http/server.go`, 22.0 to 9.1 on `transport.go`. Profiling came
+  first, and corrected the guess: the traversal itself is the cost, not the
+  lookups inside it, so the only way to make it cheaper is to visit fewer
+  nodes.
+- `analyzer.forget(bufnr)` drops the reuse cache for one buffer, or for all of
+  them with no argument. Buffers release it on deletion.
+
+### Notes
+
+- The cache keys on tree-sitter node ids, which survive an incremental reparse
+  for any subtree that did not change. Rebuilding a subtree rebuilds its
+  ancestors, so an unchanged id means nothing inside changed either -- checked
+  rather than assumed, including for an edit buried inside a closure.
+- Rows are rebased rather than trusted: inserting a line above a function
+  shifts its rows without touching its id.
+- A stale entry would produce a plausible wrong number rather than an error, so
+  every case in the new suite compares the incremental answer against one
+  computed from scratch, across shifts, edits inside a function, added and
+  removed functions, both nesting modes, and after a query reload.
+- `:Cyclomatic explain` takes the slow path deliberately. It records a row per
+  contribution, which rebasing would have to follow, and it runs once on
+  demand.
+
 ## [0.8.0] - 2026-08-20
 
 ### Added
@@ -219,7 +248,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.1...v0.6.0

@@ -236,6 +236,7 @@ local function create_autocmds()
         st.timer:close()
       end
       state[args.buf] = nil
+      analyzer.forget(args.buf)
     end,
     desc = 'Drop cached complexity state',
   })

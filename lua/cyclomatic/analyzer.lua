@@ -22,6 +22,16 @@ local SEMANTICS = {
 
 local QUERY_NAME = 'cyclomatic'
 
+--- Per-buffer results for function subtrees, keyed by node id.
+---
+--- A node's id survives an incremental reparse for any subtree tree-sitter did
+--- not have to rebuild -- and rebuilding a subtree rebuilds its ancestors, so
+--- an unchanged id means nothing inside changed either. Inserting a line above
+--- a function shifts its rows without touching its id, which is why the cached
+--- rows are rebased rather than trusted.
+---@type table<integer, { mode: string, bodies: table<string, table> }>
+local subtree_cache = {}
+
 --- Lookup results per language, so repeated lookups on unsupported buffers stay
 --- cheap. The failure reason is cached alongside: a missing query and a parser
 --- whose ABI the running Neovim cannot load are very different problems, and
@@ -56,6 +66,7 @@ end
 --- Drop cached queries so edited .scm files are picked up without a restart.
 function M.reload()
   query_cache = {}
+  subtree_cache = {}
   if vim.treesitter.query.invalidate_query_cache then
     vim.treesitter.query.invalidate_query_cache()
   end
@@ -293,7 +304,8 @@ end
 --- @param root TSNode
 --- @param source integer|string
 --- @param tracing boolean|nil record what each point contributed, for `explain`
-local function walk_tree(query, root, source, tracing)
+--- @param reuse fun(node: TSNode): table|nil results for an unchanged subtree
+local function walk_tree(query, root, source, tracing, reuse)
   local marks, bodies = collect(query, root, source)
   local separate = config.options.nested_functions == 'separate'
 
@@ -327,6 +339,8 @@ local function walk_tree(query, root, source, tracing)
   end
 
   local entries = {}
+  --- body node id -> what walking that subtree produced, for the next parse.
+  local produced = {}
   local file_level = {
     cyclomatic = 0,
     cognitive = 0,
@@ -340,9 +354,27 @@ local function walk_tree(query, root, source, tracing)
   local function visit(node, frame, nesting)
     local caps = marks[node:id()]
     local body_meta = bodies[node:id()]
+    -- Index in `entries` where this node's own subtree began, when it opened a
+    -- frame. Everything from there on is what the subtree produced.
+    local opened_at = nil
 
     if body_meta then
-      if frame == nil or separate then
+      -- Only a body that would open a frame of its own can be reused wholesale.
+      -- In `inline` mode a nested body has no entry -- its branches belong to
+      -- the function around it -- so reusing one would move them.
+      local opens_frame = frame == nil or separate
+      if opens_frame and reuse then
+        local cached = reuse(node)
+        if cached then
+          for _, entry in ipairs(cached) do
+            entries[#entries + 1] = entry
+          end
+          return
+        end
+      end
+
+      if opens_frame then
+        opened_at = #entries + 1
         local name, row = label_of(node, body_meta, source)
         frame = {
           name = name,
@@ -434,12 +466,22 @@ local function walk_tree(query, root, source, tracing)
         and (child_caps['chained'] or child_caps['cognitive.flat'] or child_caps['alongside'])
       visit(child, frame, alongside and inherited or nesting)
     end
+
+    -- Everything appended while this subtree was being walked came from it.
+    if opened_at then
+      produced[node:id()] = { row = node:start(), entries = vim.list_slice(entries, opened_at) }
+    end
   end
 
   visit(root, nil, 0)
 
   --- @param target table
   local function finalize(target)
+    -- A reused entry was finalized when it was first computed; doing it again
+    -- would charge its operator runs twice.
+    if not target.ops then
+      return
+    end
     local cost, starts = sequence_cost(target.ops)
     target.cognitive = target.cognitive + cost
     if target.contributions then
@@ -470,7 +512,7 @@ local function walk_tree(query, root, source, tracing)
   end
   finalize(file_level)
 
-  return entries, file_level
+  return entries, file_level, produced
 end
 
 ---@class CyclomaticResult
@@ -478,7 +520,21 @@ end
 ---@field entries CyclomaticEntry[]
 ---@field file_level table
 
+--- Drop the reuse cache for one buffer, or all of them.
+---@param bufnr integer|nil
+function M.forget(bufnr)
+  if bufnr then
+    subtree_cache[bufnr] = nil
+  else
+    subtree_cache = {}
+  end
+end
+
 --- Analyze a buffer.
+---
+--- Unchanged functions are carried over from the previous parse rather than
+--- walked again: on a large file the walk costs more than the parse, and after
+--- an edit almost all of it is repeated work.
 ---@param bufnr integer
 ---@param opts { trace: boolean }|nil record what each point contributed
 ---@return CyclomaticResult|nil
@@ -504,9 +560,46 @@ function M.analyze(bufnr, opts)
     return nil, 'no parser for ' .. lang
   end
 
+  -- Tracing records a row per contribution, which rebasing would have to
+  -- follow; `explain` runs once on demand, so it simply takes the slow path.
+  local tracing = opts and opts.trace
+  local mode = config.options.nested_functions
+  local previous = subtree_cache[bufnr]
+  if previous and previous.mode ~= mode then
+    previous = nil
+  end
+  local fresh = { mode = mode, bodies = {} }
+
+  ---@param node TSNode
+  ---@return table[]|nil
+  local reuse = not tracing
+      and previous
+      and function(node)
+        local cached = previous.bodies[node:id()]
+        if not cached then
+          return nil
+        end
+        local delta = node:start() - cached.row
+        if delta == 0 then
+          return cached.entries
+        end
+        local shifted = {}
+        for index, entry in ipairs(cached.entries) do
+          local copy = vim.tbl_extend('force', {}, entry)
+          copy.row = entry.row + delta
+          copy.end_row = entry.end_row + delta
+          shifted[index] = copy
+        end
+        return shifted
+      end
+    or nil
+
   local entries, file_level = {}, { cyclomatic = 0, cognitive = 0 }
   for _, tree in ipairs(parser:parse() or {}) do
-    local got, file = walk_tree(query, tree:root(), bufnr, opts and opts.trace)
+    local got, file, produced = walk_tree(query, tree:root(), bufnr, tracing, reuse)
+    for id, record in pairs(produced or {}) do
+      fresh.bodies[id] = record
+    end
     vim.list_extend(entries, got)
     file_level.cyclomatic = file_level.cyclomatic + file.cyclomatic
     file_level.cognitive = file_level.cognitive + file.cognitive
@@ -518,6 +611,10 @@ function M.analyze(bufnr, opts)
     end
     return a.name < b.name
   end)
+
+  if not tracing then
+    subtree_cache[bufnr] = fresh
+  end
 
   return { lang = lang, entries = entries, file_level = file_level }
 end
