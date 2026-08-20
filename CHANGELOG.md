@@ -7,6 +7,8 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-08-20
+
 ### Added
 
 - A screenshot in the README, in place of the ASCII mock-up that stood for one.
@@ -164,7 +166,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.3.0...v0.4.0
