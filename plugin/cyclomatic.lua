@@ -49,6 +49,36 @@ local subcommands = {
     end
     vim.notify('cyclomatic: showing ' .. wanted .. ' complexity', vim.log.levels.INFO)
   end,
+  scaffold = function(args)
+    local bufnr = vim.api.nvim_get_current_buf()
+    local lang = args[1] or require('cyclomatic.analyzer').buf_lang(bufnr)
+    if not lang then
+      vim.notify('cyclomatic: no language for this buffer', vim.log.levels.ERROR)
+      return
+    end
+
+    local source = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), '\n')
+    local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ':t')
+    local draft, err = require('cyclomatic.scaffold').generate(
+      { { name = name ~= '' and name or '[buffer]', text = source } },
+      lang
+    )
+    if not draft then
+      vim.notify('cyclomatic: ' .. tostring(err), vim.log.levels.ERROR)
+      return
+    end
+
+    -- A scratch buffer rather than a file: the draft wants reading and editing
+    -- before it is worth saving to queries/<lang>/cyclomatic.scm.
+    vim.cmd('vnew')
+    local out = vim.api.nvim_get_current_buf()
+    vim.api.nvim_buf_set_lines(out, 0, -1, false, vim.split(draft, '\n'))
+    vim.bo[out].filetype = 'query'
+    vim.bo[out].buftype = 'nofile'
+    vim.bo[out].bufhidden = 'wipe'
+    vim.api.nvim_buf_set_name(out, 'cyclomatic-draft://' .. lang)
+  end,
+
   info = function()
     local cyclomatic = require('cyclomatic')
     local bufnr = vim.api.nvim_get_current_buf()

@@ -12,9 +12,10 @@ runtimepath, so the engine picks it up as soon as it exists — and a user can
 override yours by putting their own version in
 `~/.config/nvim/queries/<lang>/cyclomatic.scm`.
 
-What follows is the real path taken to add Lua, including the two places where
-the obvious query would have been wrong. The capture vocabulary itself is in
-[CONTRACT.md](CONTRACT.md); this is how to arrive at it for a new grammar.
+Step 2 generates a first draft for you; the rest of this guide is how to check
+what it guessed. What follows is the real path taken to add Lua, including the
+place where the obvious reading of the grammar was wrong. The capture vocabulary
+itself is in [CONTRACT.md](CONTRACT.md).
 
 ---
 
@@ -28,7 +29,46 @@ An empty list means the parser is missing — install it however you normally do
 (`nvim-treesitter`, or `scripts/install-parsers.sh` for the two this repo builds
 itself). Lua needs nothing: Neovim bundles it.
 
-## 2. Read the grammar
+## 2. Generate a draft
+
+Rather than starting from an empty file, let the plugin read the grammar for
+you:
+
+```bash
+nvim --headless -l scripts/scaffold-query.lua lua sample1.lua sample2.lua
+```
+
+or, from a buffer of the language in question, `:Cyclomatic scaffold`.
+
+It walks the parsed samples, classifies node types by role, and emits a draft
+query — always valid syntax, so it can be saved and run before a line of it is
+reviewed. On Go's own fixtures the unedited draft scores **100% against
+gocyclo** across 1619 standard-library functions, and 79% against gocognit; the
+cognitive gap is the part that cannot be guessed from tree shape, covered in
+step 4.
+
+Two things it does that are worth the trouble on their own. It reports the
+constructs your samples never used —
+
+```
+; ==== NOT PRESENT IN THE SAMPLE ====
+; * no boolean operators (`a && b`)
+```
+
+— because a rule cannot be guessed from code that does not exercise it, and a
+missing rule is silent. And it names the shapes that fail silently:
+
+```
+; ==== WOULD OTHERWISE HAVE FAILED SILENTLY ====
+; * function_signature keeps its body in a SIBLING (function_body), not a child
+;   -- nesting them in a query matches nothing and reports CC=1 everywhere
+```
+
+Pass several samples. The draft is only as complete as the code it saw.
+
+Everything it emits is a guess. The rest of this guide is how to check them.
+
+## 3. Read the grammar
 
 This is the step worth spending time on. Write a small file using the
 constructs that branch, and dump its tree:
@@ -57,16 +97,44 @@ Three facts come straight out of that, and each one changes the query:
   `queries/dart/cyclomatic.scm`.
 - `elseif` and `else` are **node types of their own**. In Go and Dart an
   `else if` is just an `if_statement` in the `alternative:` field.
-- `binary_expression` has `left:` and `right:` but **no `operator:` field**. Go
-  has one, which is how `queries/go/cyclomatic.scm` picks out `&&` and `||`.
-  That technique does not transfer.
+- `binary_expression` keeps `and`/`or` as an **anonymous child**. Whether it
+  *also* exposes them through an `operator:` field depends on the version of the
+  grammar, which is a trap worth spelling out.
 
-Confirm anything the dump leaves ambiguous with the s-expression of a single
-node type, which shows field names exactly as a query must spell them.
+Three things collide in that last point, and each one can mislead on its own.
 
-## 3. Write the query
+**`node:sexpr()` omits anonymous nodes entirely, field names included.** Lua's
+operator is an anonymous token, so its sexpr reads
 
-Start from `queries/go/cyclomatic.scm` and adapt. The mechanical parts first:
+```
+(binary_expression left: (identifier) right: (identifier))
+```
+
+which looks like a node with no operator field whether or not it has one.
+`tests/tools/dump.lua` prints anonymous children that fill a field, so use it —
+or probe directly with `node:field('operator')`.
+
+**The field's existence varies by grammar version.** The Lua grammar bundled
+with Neovim 0.12 has an `operator:` field; the one bundled with 0.11 does not,
+and a query written against it fails to *parse* there. So even having checked,
+do not depend on it.
+
+**The anonymous form works either way**, in both grammars and both versions:
+
+```scheme
+((binary_expression "and") @decision.flat)
+```
+
+That is why every query here matches operators as tokens, Go's `&&` included,
+even where a field is available.
+
+Dart differs again, and this one is not a version accident: its operator is a
+*named* `logical_and_operator` child with no field at all, so
+`queries/dart/cyclomatic.scm` captures the whole expression instead.
+
+## 4. Refine the draft
+
+The draft from step 2 already has the mechanical parts:
 
 ```scheme
 (function_declaration
@@ -101,8 +169,8 @@ patterns over the same node:
 
 `@chained` is a modifier, not a rule. On its own it counts nothing.
 
-**`and`/`or` are matched as anonymous children**, since there is no field to
-select them by:
+**`and`/`or` are matched as anonymous tokens**, for the portability reason
+above:
 
 ```scheme
 ((binary_expression "and") @decision.flat)
@@ -124,7 +192,7 @@ Finally, the pieces that count for only one metric:
 (goto_statement) @cognitive.flat   ; Lua's only jump
 ```
 
-## 4. Check against a reference tool
+## 5. Check against a reference tool
 
 Do not trust your own arithmetic. Most languages have an established checker,
 and matching it is both a correctness proof and a decision about *whose* rules
@@ -152,7 +220,7 @@ with like. Reference tools disagree with each other about nesting, about whether
 `default:` counts, and about recursion — see the Limitations section of the
 README for the ones this plugin takes a position on.
 
-## 5. Add a fixture
+## 6. Add a fixture
 
 Fixtures carry their own expectations as comments, and the runner treats a
 function it finds without an expectation as a failure, so a query that starts
@@ -193,7 +261,7 @@ Then:
 nvim --headless -l tests/run.lua fixtures
 ```
 
-## 6. Wire it into CI
+## 7. Wire it into CI
 
 If the parser is bundled with Neovim, as Lua's is, there is nothing to do. If it
 is not, add the grammar to `scripts/install-parsers.sh` **pinned by revision**:

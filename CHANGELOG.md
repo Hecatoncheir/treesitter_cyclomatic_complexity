@@ -7,6 +7,29 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-20
+
+### Added
+
+- A query scaffolder: `:Cyclomatic scaffold [lang]` for the current buffer, or
+  `scripts/scaffold-query.lua` for files. It reads parsed samples and emits a
+  draft `cyclomatic.scm` that is always valid query syntax, reports the
+  constructs the samples never exercised, and names the grammar shapes that
+  fail silently -- a body held in a sibling rather than a child above all.
+  Unedited, its Go draft scores 100% against gocyclo across 1619
+  standard-library functions, and 79% against gocognit.
+
+### Fixed
+
+- `tests/tools/dump.lua` now prints anonymous children that occupy a field.
+  `node:sexpr()` omits anonymous nodes entirely, so an operator held in an
+  `operator:` field is invisible there.
+- Boolean operators are matched as anonymous tokens rather than through the
+  `operator:` field, in the Go query as well as the Lua one. Whether a grammar
+  exposes that field depends on its version -- the Lua grammar bundled with
+  Neovim 0.12 has it, the one bundled with 0.11 does not, and a query written
+  against it fails to parse there. The token form works either way.
+
 ## [0.3.0] - 2026-08-20
 
 ### Added
@@ -96,7 +119,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.1.0...v0.1.1

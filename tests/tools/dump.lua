@@ -7,6 +7,11 @@
 --- queries/<lang>/cyclomatic.scm are written against. Watch in particular for
 --- whether a function's body is a *child* of its signature or a *sibling* --
 --- getting that wrong yields CC=1 for every function, with no error.
+---
+--- Anonymous children are printed too, quoted, when they occupy a field. That
+--- is deliberate: `node:sexpr()` omits anonymous nodes entirely, so an operator
+--- held in an `operator:` field is invisible there, and reading sexpr output
+--- alone will convince you a grammar has no such field when it does.
 local file, lang, max_depth = _G.arg[1], _G.arg[2], tonumber(_G.arg[3] or 99)
 
 if not file or not lang then
@@ -58,8 +63,10 @@ local function walk(node, depth)
     return
   end
   for child in node:iter_children() do
-    if child:named() then
-      local field = field_name(node, child)
+    local field = field_name(node, child)
+    -- Named nodes always; anonymous ones only when they fill a field, which is
+    -- where operators hide.
+    if child:named() or field then
       local text = vim.treesitter.get_node_text(child, source):gsub('%s+', ' ')
       if #text > 44 then
         text = text:sub(1, 42) .. '..'
@@ -67,12 +74,14 @@ local function walk(node, depth)
       out[#out + 1] = ('%s%s%s  [%d:%d]  %s'):format(
         ('| '):rep(depth),
         field and (field .. ': ') or '',
-        child:type(),
+        child:named() and child:type() or ('"' .. child:type() .. '"'),
         child:start() + 1,
         child:end_() + 1,
         text
       )
-      walk(child, depth + 1)
+      if child:named() then
+        walk(child, depth + 1)
+      end
     end
   end
 end

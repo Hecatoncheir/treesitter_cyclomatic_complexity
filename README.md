@@ -140,6 +140,7 @@ vim.api.nvim_set_hl(0, 'CyclomaticVeryHigh', { fg = '#ea6962', bold = true })
 | `:Cyclomatic metric [cyclomatic\|cognitive]` | switch metric, or flip it with no argument |
 | `:Cyclomatic list` | functions in this buffer, most complex first |
 | `:Cyclomatic project [root]` | same across the project (async) |
+| `:Cyclomatic scaffold [lang]` | draft a `cyclomatic.scm` from the current buffer |
 | `:Cyclomatic info` | language, support status, score at the cursor |
 | `:Cyclomatic reload` | re-read query files after editing one |
 
@@ -190,8 +191,19 @@ Write `queries/<lang>/cyclomatic.scm`. No Lua changes are needed — Neovim find
 the file by runtimepath, which also means you can override the shipped rules by
 putting your own version in `~/.config/nvim/queries/<lang>/cyclomatic.scm`.
 
+Start by letting the plugin read the grammar for you:
+
+```bash
+nvim --headless -l scripts/scaffold-query.lua rust sample1.rs sample2.rs
+```
+
+The draft it emits is always valid query syntax, names the shapes that fail
+silently, and lists the constructs your samples never exercised. On Go's own
+fixtures the unedited draft scores 100% against gocyclo across 1619
+standard-library functions.
+
 [doc/ADDING-A-LANGUAGE.md](doc/ADDING-A-LANGUAGE.md) walks through the whole
-process on Lua, including the two places the obvious query would have been
+process on Lua, including the place where the obvious reading of the grammar was
 wrong and the traps that fail silently rather than erroring.
 
 ## Tests

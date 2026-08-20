@@ -69,8 +69,11 @@
 (select_statement) @cognitive
 
 ; ---------------------------------------------------------------- operators --
-((binary_expression operator: "&&") @decision.flat)
-((binary_expression operator: "||") @decision.flat)
+; Matched as anonymous children rather than through the `operator:` field.
+; Both work here, but whether a grammar exposes that field varies by version,
+; and the anonymous form works either way.
+((binary_expression "&&") @decision.flat)
+((binary_expression "||") @decision.flat)
 
 ; ------------------------------------------------------------------- jumps ---
 ; Only *labelled* jumps break the reader's linear flow; a plain break/continue

@@ -3,11 +3,12 @@
 ;; Two things differ from the Go and Dart queries and are worth knowing before
 ;; editing this file:
 ;;
-;;   * `binary_expression` has no `operator:` field here, so `and`/`or` cannot be
-;;     selected the way Go's `&&` is. They are matched as anonymous children
-;;     instead, with the capture on the *expression* -- capturing the token
-;;     would put each operator in its own sequence and break the cognitive
-;;     run-counting.
+;;   * `and`/`or` are matched as anonymous children rather than through an
+;;     `operator:` field. Whether that field exists depends on the grammar
+;;     version -- Neovim 0.12 ships a Lua grammar that has it, 0.11 one that
+;;     does not -- while the anonymous form works either way. The capture goes
+;;     on the *expression*, not the token: capturing tokens puts each operator
+;;     in its own sequence and overcharges cognitive complexity.
 ;;   * `elseif` and `else` are node types of their own rather than a nested
 ;;     `if_statement`, so @chained has to be layered onto an explicit @decision
 ;;     instead of arriving from the generic if pattern.
