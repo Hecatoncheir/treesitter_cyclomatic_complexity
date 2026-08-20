@@ -12,28 +12,35 @@ coloured by how bad it is:
 
 ![Cognitive complexity annotated inline on a Flutter build method](preview.png)
 
-**Languages: Go, Dart and Lua.** Adding another is a query file, not code — see
-[doc/ADDING-A-LANGUAGE.md](doc/ADDING-A-LANGUAGE.md) for a worked example, and
-[doc/CONTRACT.md](doc/CONTRACT.md) for the capture vocabulary.
+**Languages: Go, Dart, Lua and Python.** Adding another is a query file, not
+code — see [doc/ADDING-A-LANGUAGE.md](doc/ADDING-A-LANGUAGE.md), which walks the
+whole job command by command, and [doc/CONTRACT.md](doc/CONTRACT.md) for the
+capture vocabulary.
 
 ## Why this can be trusted
 
 Cyclomatic complexity is a purely syntactic metric, which is exactly what a
-parse tree can answer. The numbers are checked against the reference tools for
-Go on 1620 functions from the Go standard library (`net/http`, `encoding/json`,
-`go/parser`, `strings`, `time`):
+parse tree can answer. Rather than assert that, the numbers are checked against
+each language's established tool over a real corpus:
 
 | Language | Metric | Reference | Corpus | Agreement |
 | --- | --- | --- | --- | --- |
 | Go | Cyclomatic | `gocyclo` | Go standard library | **1620 / 1620 exact** |
 | Go | Cognitive | `gocognit` | Go standard library | **1106 / 1118 exact** |
 | Lua | Cyclomatic | `luacheck` | Neovim runtime | **911 / 917 exact** |
+| Python | Cyclomatic | `radon` | Python standard library | **2134 / 2138 exact** |
 | Dart | Cyclomatic | `dart_code_metrics` | 17 isolated constructs | **13 / 17 agree** |
 
 All 12 Go cognitive differences are recursion, which `gocognit` charges a point
 for and this plugin does not — see [Limitations](#limitations). The Lua figure
 is measured in `nested_functions = 'separate'`, which is the model luacheck
 uses.
+
+All four Python differences are `assert`: radon counts the statement but does
+not descend into its condition, scoring `assert a and b` the same as
+`assert a` — while counting that same `and` in an `if` or a `return`. The
+operator is counted here, which is the only reading consistent across the three
+contexts.
 
 Dart deserves its own sentence, because 13 of 17 is the honest number and it
 understates the case. `dart_code_metrics` is the only Dart complexity tool still
@@ -69,8 +76,8 @@ lazy.nvim:
 
 `main = 'cyclomatic'` is required — the Lua module name differs from the repo
 name. Needs Neovim 0.11+ and a tree-sitter parser for the language you are
-editing (`go` and `dart`; Lua's is bundled with Neovim). Neovim 0.10 loads only
-tree-sitter ABI 13-14, which current Go and Dart grammars have outgrown.
+editing (`go`, `dart`, `python`; Lua's is bundled with Neovim). Neovim 0.10
+loads only tree-sitter ABI 13-14, which current grammars have outgrown.
 
 ## Configuration
 
@@ -211,7 +218,9 @@ Write `queries/<lang>/cyclomatic.scm`. No Lua changes are needed — Neovim find
 the file by runtimepath, which also means you can override the shipped rules by
 putting your own version in `~/.config/nvim/queries/<lang>/cyclomatic.scm`.
 
-Start by letting the plugin read the grammar for you:
+[doc/ADDING-A-LANGUAGE.md](doc/ADDING-A-LANGUAGE.md) opens with a quickstart
+that does the whole job on Python, command by command. In short, start by
+letting the plugin read the grammar for you:
 
 ```bash
 nvim --headless -l scripts/scaffold-query.lua rust sample1.rs sample2.rs

@@ -12,12 +12,140 @@ runtimepath, so the engine picks it up as soon as it exists — and a user can
 override yours by putting their own version in
 `~/.config/nvim/queries/<lang>/cyclomatic.scm`.
 
-Step 2 generates a first draft for you; the rest of this guide is how to check
-what it guessed. What follows is the real path taken to add Lua, including the
+Two routes through this. The **Quickstart** below is the whole job on Python,
+command by command, and is what to follow when adding a language. The numbered
+sections after it are the same ground at reading pace, on Lua, including the
 place where the obvious reading of the grammar was wrong. The capture vocabulary
 itself is in [CONTRACT.md](CONTRACT.md).
 
 ---
+
+## Quickstart: Python, end to end
+
+This is verbatim how Python support in this repository was added, including the
+three rules that would not have been guessed and the one place the reference
+tool is left behind.
+
+### Get a parser
+
+```bash
+nvim --headless -u NONE -c "lua print(#vim.api.nvim_get_runtime_file('parser/python.so', true))" -c qa
+```
+
+Zero means install it. For a language the test suite will cover, add the grammar
+to `scripts/install-parsers.sh` **pinned to a commit**, and resolve any tag
+yourself — a tag can be moved, a commit cannot:
+
+```bash
+git ls-remote https://github.com/tree-sitter/tree-sitter-python v0.25.0^{}
+```
+
+### Write samples, then scaffold
+
+Two files, covering everything that branches: `if`/`elif`/`else`, `and`/`or`,
+loops, `try`, comprehensions, ternaries, `match`, `lambda`, a nested `def`.
+
+```bash
+nvim --headless -l scripts/scaffold-query.lua python basics.py expressions.py
+```
+
+The draft comes back nearly complete — `function_definition`, the branch nodes,
+`match_statement` with its `case_clause`, and `((boolean_operator "and"))` — and,
+more usefully, it separates out what it will not decide for you:
+
+```
+; ==== PROBABLY PARTS, BUT CHECK ====
+; These name a piece of a construct in most grammars -- but not all:
+; Python's elif_clause is a real branch. Uncomment what belongs.
+;; (elif_clause) @decision
+;; (except_clause) @decision
+;; (for_in_clause) @decision
+;; (if_clause) @decision
+```
+
+All four of those turn out to be real branches in Python. Which brings us to how
+you find that out.
+
+### Ask the reference tool, one construct at a time
+
+`radon` is Python's. Do not run it on your samples and squint at the totals —
+write one function per construct, so a disagreement points at exactly one rule:
+
+```bash
+radon cc -s probe.py
+```
+
+Twenty short functions later, three answers that no amount of staring at the
+grammar would have produced:
+
+| Construct | radon | Why |
+| --- | --- | --- |
+| `for … else` | counts | the `else` runs only if the loop finished without `break` |
+| `if … else` | does not | as in every other language here |
+| `[x for x in xs]` | counts | a comprehension is a loop, and each extra clause is another path |
+| `assert n > 0` | counts | a conditional raise |
+
+The first two share a node type — Python's grammar gives both `alternative:
+(else_clause)` — so they are told apart by their parent:
+
+```scheme
+(if_statement alternative: (else_clause) @cognitive.flat)   ; no new path
+(for_statement alternative: (else_clause) @decision)        ; a new path
+(while_statement alternative: (else_clause) @decision)
+(try_statement (else_clause) @decision)
+```
+
+Python also does something no other grammar here manages: it makes the
+fall-through arm identifiable. A wildcard `case _` has a `case_pattern` with no
+named child, so requiring one excludes it — where Dart's equivalent has to be
+counted and documented as a known excess:
+
+```scheme
+((case_clause (case_pattern (_))) @cyclomatic)
+```
+
+### Run it against a corpus, and read the disagreements
+
+```bash
+radon cc -j $(cat corpus.txt) > radon.json
+```
+
+The first full run scored **99.77%** on 2138 functions of the Python standard
+library, with five disagreements. Four were `assert`. One was not, and it was
+the interesting one: `traceback.py` counted one *lower* than radon.
+
+The cause was a lambda. radon inlines a lambda's branches into the function
+around it, while still reporting a nested `def` separately — a mixed model that
+neither `inline` nor `separate` reproduces. The fix was not a mode but a query
+decision: a lambda is simply not captured as a function.
+
+```scheme
+; A lambda is deliberately *not* a function here. Python restricts it to a
+; single expression, so it can never be complex enough to deserve an entry of
+; its own, and reporting `<closure> cc=2` for `key=lambda x: x or 0` is noise.
+```
+
+That took it to **99.81%**, and the four that remain are all `assert`: radon
+counts the statement but does not descend into its condition, scoring
+`assert a and b` the same as `assert a` — while counting that same `and` in an
+`if` or a `return`. Being inconsistent with itself is what decides it; the
+operator is counted here, and the fixture says so out loud.
+
+### Pin it
+
+```lua
+local EXTENSIONS = { go = 'go', dart = 'dart', lua = 'lua', py = 'python' }
+```
+
+Then a fixture whose `cc` values are the reference tool's, with the one
+deliberate departure marked as such, and:
+
+```bash
+nvim --headless -l tests/run.lua fixtures
+```
+
+Total: one query file, one fixture, two lines elsewhere. The scaffolder wrote
+most of the first; the reference tool decided everything that mattered.
 
 ## 1. Check the parser
 

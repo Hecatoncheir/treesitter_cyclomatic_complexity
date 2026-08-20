@@ -21,6 +21,8 @@ TARGET="$(cd "$TARGET" && pwd)"
 GRAMMARS=(
   "go|https://github.com/tree-sitter/tree-sitter-go|2346a3ab1bb3857b48b29d779a1ef9799a248cd7"
   "dart|https://github.com/UserNobody14/tree-sitter-dart|be07cf7118d3dba06236a3f19541685a68209934"
+  # tree-sitter-python v0.25.0, resolved to its commit: a tag can move.
+  "python|https://github.com/tree-sitter/tree-sitter-python|293fdc02038ee2bf0e2e206711b69c90ac0d413f"
 )
 
 WORK="$(mktemp -d)"

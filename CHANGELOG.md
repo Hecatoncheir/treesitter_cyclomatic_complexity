@@ -7,6 +7,24 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-20
+
+### Added
+
+- **Python support** (`queries/python/cyclomatic.scm`). Cyclomatic complexity
+  matches `radon` on 2134 of 2138 functions across the Python standard library;
+  the four differences are all `assert`, where radon counts the statement but
+  not the boolean operator inside it, while counting that same operator in an
+  `if` or a `return`.
+- A quickstart at the top of `doc/ADDING-A-LANGUAGE.md`: the whole job on
+  Python, command by command, including the three rules that cannot be guessed
+  from the grammar -- `for … else` opens a path where `if … else` does not, a
+  comprehension is a loop, and `assert` is a conditional raise -- and how a
+  disagreement over a lambda turned out to be a query decision rather than a
+  configuration one.
+- The Python grammar in `scripts/install-parsers.sh`, pinned to the commit
+  behind its `v0.25.0` tag rather than the tag itself.
+
 ## [0.5.1] - 2026-08-20
 
 ### Added
@@ -166,7 +184,8 @@ First release.
 - Cognitive complexity matches `gocognit` on **1106 of 1118**; every difference
   is recursion, which needs symbol resolution that tree-sitter does not provide.
 
-[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/Hecatoncheir/treesitter_cyclomatic_complexity/compare/v0.4.0...v0.4.1
